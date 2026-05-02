@@ -94,6 +94,71 @@ Queries: `listCareRules()`, `createCareRule(input)`, `setCareRuleActive(ruleId, 
 
 Insert: `recordSabawoonWatchAlert(payload)` — flexible payload parser
 
+### `fall_risk_observations` — Fall-risk time series data
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text (PK) | |
+| `person_id` | text (FK → care_people) | |
+| `schema_version` | text | Always `"fallrisk.v1"` |
+| `message_type` | text | `"healthkit_snapshot"` · `"feature_window"` · `"instability_event"` · `"session_summary"` |
+| `device_id` | text | Watch device identifier |
+| `session_id` | text (nullable) | Groups related observations |
+| `generated_at` | timestamptz | When the watch generated this data |
+| `sequence` | integer | Ordering within a session |
+| `source_app` | text | `"watch"` · `"ios"` |
+| `window_start` | timestamptz (nullable) | Feature window start |
+| `window_end` | timestamptz (nullable) | Feature window end |
+| `detected_at` | timestamptz (nullable) | For instability events |
+| `event_type` | text (nullable) | |
+| `severity` | text (nullable) | `"info"` · `"moderate"` · `"high"` |
+| `activity_class` | text (nullable) | |
+| `rule_risk_score_100` | integer (nullable) | 0–100 composite risk score |
+| `rule_instability_score_100` | integer (nullable) | 0–100 |
+| `rule_risk_level` | text (nullable) | `"low"` · `"moderate"` · `"high"` |
+| `ml_risk_score_01` | numeric (nullable) | 0.0–1.0 ML model output |
+| `ml_model_version` | text (nullable) | |
+| `walking_steadiness_score_01` | numeric (nullable) | |
+| `walking_steadiness_class` | text (nullable) | `"ok"` · `"low"` · `"very_low"` · `"unknown"` |
+| `walking_speed_mps` | numeric (nullable) | |
+| `walking_step_length_m` | numeric (nullable) | |
+| `walking_asymmetry_pct` | numeric (nullable) | |
+| `walking_double_support_pct` | numeric (nullable) | |
+| `heart_rate_bpm` | integer (nullable) | |
+| `cadence_spm` | numeric (nullable) | |
+| `cadence_cv_pct` | numeric (nullable) | |
+| `stride_time_cv_pct` | numeric (nullable) | |
+| `accel_peak_g` | numeric (nullable) | |
+| `jerk_peak_g_per_s` | numeric (nullable) | |
+| `gyro_peak_rad_s` | numeric (nullable) | |
+| `attitude_change_deg` | numeric (nullable) | |
+| `sway_rms_deg` | numeric (nullable) | |
+| `step_count` | integer (nullable) | |
+| `altitude_delta_m` | numeric (nullable) | |
+| `floors_ascended` | integer (nullable) | |
+| `floors_descended` | integer (nullable) | |
+| `risk_flags` | jsonb | Array of risk flag objects |
+| `payload` | jsonb | Full raw envelope payload |
+| `created_at` | timestamptz | |
+
+Queries: `listFallRiskObservationsForPerson(personId, limit)`
+
+### `medications` — Medication schedules
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text (PK) | |
+| `elder_id` | text (FK → care_people) | |
+| `name` | text | Medication name |
+| `weekly_schedule` | jsonb | `{ "monday": [{ "dose": "10mg", "time": "8:00 AM" }] }` |
+| `description` | text (nullable) | |
+| `delivery_method` | text (nullable) | e.g. "oral", "injection" |
+| `dosage` | text | Default dose string |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
+
+Queries: `listMedicationsForPerson(personId)`
+
 ### `profiles` — Caregiver profiles
 
 | Column | Type | Notes |
