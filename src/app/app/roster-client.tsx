@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { CareAlert, CareAlertSeverity } from "@/lib/care-alerts";
 import type { CarePeopleGroup, CarePerson } from "@/lib/care-people";
 import { resolvePersonPhoto } from "@/lib/care-person-image";
 import type { CareProfile } from "@/lib/profiles";
+import { AppSidebar } from "./sidebar";
 import {
   updateProfileNotificationNumberAction,
   type ProfileNumberActionState,
@@ -32,16 +33,6 @@ const initialProfileNumberState: ProfileNumberActionState = {
   ok: false,
   message: "",
 };
-
-const navItems = [
-  { kind: "view", label: "Dashboard", short: "D", view: "dashboard" },
-  { kind: "view", label: "Roster", short: "R", view: "roster" },
-  { kind: "view", label: "Alerts", short: "A", view: "alerts" },
-  { kind: "link", label: "Rules", short: "R", href: "/app/rules" },
-] satisfies Array<
-  | { kind: "link"; label: string; short: string; href: string }
-  | { kind: "view"; label: string; short: string; view: CareView }
->;
 
 const careViews: Record<CareView, { eyebrow: string; title: string }> = {
   dashboard: { eyebrow: "Care operations", title: "Dashboard" },
@@ -167,17 +158,6 @@ function buildRosterAlerts(alerts: CareAlert[] = [], groups: RosterGroup[] = [])
   });
 }
 
-function HeartGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="care-heart-glyph">
-      <path
-        d="M12 21s-7.5-4.7-9.6-9.2C.9 8.5 2.7 5 6.2 5c2 0 3.3 1.1 3.9 2.1C10.7 6.1 12 5 14 5c3.5 0 5.3 3.5 3.8 6.8C15.5 16.3 12 21 12 21Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
 function PeopleIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -186,60 +166,6 @@ function PeopleIcon() {
         fill="currentColor"
       />
     </svg>
-  );
-}
-
-function CareSidebar({
-  activeView,
-  onViewChange,
-  onlinePercent,
-}: Readonly<{
-  activeView: CareView;
-  onViewChange: (view: CareView) => void;
-  onlinePercent: number;
-}>) {
-  return (
-    <aside className="care-sidebar" aria-label="Application navigation">
-      <Link className="care-sidebar-brand" href="/" aria-label="Safely home">
-        <span className="care-sidebar-mark">
-          <HeartGlyph />
-        </span>
-        <span>
-          <strong>Safely</strong>
-          <small>Care operations</small>
-        </span>
-      </Link>
-
-      <nav className="care-sidebar-nav" aria-label="Care workspace">
-        {navItems.map((item) =>
-          item.kind === "link" ? (
-            <Link className="care-sidebar-link" href={item.href} key={item.label}>
-              <span>{item.short}</span>
-              {item.label}
-            </Link>
-          ) : (
-            <button
-              aria-current={activeView === item.view ? "page" : undefined}
-              className={`care-sidebar-link${activeView === item.view ? " active" : ""}`}
-              key={item.label}
-              onClick={() => onViewChange(item.view)}
-              type="button"
-            >
-              <span>{item.short}</span>
-              {item.label}
-            </button>
-          ),
-        )}
-      </nav>
-
-      <div className="care-sidebar-status" aria-label="Live monitoring status">
-        <div>
-          <span aria-hidden="true" />
-          <strong>Live monitoring</strong>
-        </div>
-        <p>{onlinePercent}% devices online</p>
-      </div>
-    </aside>
   );
 }
 
@@ -593,21 +519,20 @@ export function RosterClient({
   people: CarePerson[];
   profile: CareProfile | null;
 }>) {
-  const [activeView, setActiveView] = useState<CareView>(initialView);
   const groups = useMemo(() => buildGroups(people, alerts), [alerts, people]);
   const rosterAlerts = useMemo(() => buildRosterAlerts(alerts, groups), [alerts, groups]);
   const onlinePercent =
     people.length === 0
       ? 0
       : Math.round((people.filter((person) => person.alert !== "offline").length / people.length) * 100);
-  const view = careViews[activeView];
+  const view = careViews[initialView];
 
   return (
     <main className="care-app-page">
       <div className="care-app-shell">
-        <CareSidebar activeView={activeView} onViewChange={setActiveView} onlinePercent={onlinePercent} />
+        <AppSidebar activePage={initialView} />
         <section className="care-main" aria-label={`${view.title} workspace`}>
-          <div className="care-board" aria-label="Senior care management board">
+          <div className={`care-board ${initialView}-board`} aria-label="Senior care management board">
             <header className="care-board-header">
               <div>
                 <p className="care-board-eyebrow">{view.eyebrow}</p>
@@ -623,7 +548,7 @@ export function RosterClient({
             </header>
 
             <CareWorkspace
-              activeView={activeView}
+              activeView={initialView}
               alerts={rosterAlerts}
               groups={groups}
               profile={profile}

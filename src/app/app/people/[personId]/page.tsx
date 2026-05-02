@@ -4,8 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { listActiveCareAlertsForPerson } from "@/lib/care-alerts";
-import { buildHrSamples, buildMeds, dayNames } from "@/lib/care-demo-metrics";
-import { formatHeartRate, formatWatchBattery, getCarePerson } from "@/lib/care-people";
+import { buildHrSamples, buildMeds, dayLabels, dayNames } from "@/lib/care-demo-metrics";
+import { formatWatchBattery, getCarePerson } from "@/lib/care-people";
+import { AppSidebar } from "../../sidebar";
 import { resolvePersonPhoto } from "@/lib/care-person-image";
 
 type PersonPageProps = {
@@ -16,23 +17,6 @@ export const metadata: Metadata = {
   title: "Safely App | Senior Profile",
   description: "Review senior medication schedule, watch status, and heart-rate trend.",
 };
-
-function buildHeartPath(samples: number[]) {
-  if (samples.length < 2) return "";
-  const width = 100;
-  const height = 34;
-  const max = Math.max(...samples);
-  const min = Math.min(...samples);
-  const range = Math.max(max - min, 1);
-
-  return samples
-    .map((value, index) => {
-      const x = (index / (samples.length - 1)) * width;
-      const y = height - ((value - min) / range) * (height - 5) - 2.5;
-      return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
-}
 
 export default async function PersonProfilePage({ params }: PersonPageProps) {
   await connection();
@@ -49,51 +33,28 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
   const image = resolvePersonPhoto(person);
   const meds = buildMeds(person.sort_order);
   const samples = buildHrSamples(person.heart_rate_bpm ?? 70, person.sort_order);
-  const heartPath = buildHeartPath(samples);
   const minHeartRate = Math.min(...samples);
   const maxHeartRate = Math.max(...samples);
+  const heartBars = samples.slice(-12);
+  const heartRange = Math.max(maxHeartRate - minHeartRate, 1);
+  const nextMedication =
+    Object.values(meds)
+      .flat()
+      .sort((first, second) => first.time.localeCompare(second.time))[0]?.time ?? "None";
+  const oxygenLevel = `${96 + (person.sort_order % 3)}%`;
+  const stepCount = (1800 + person.sort_order * 312).toLocaleString("en-US");
+  const sleepDuration = `${6 + (person.sort_order % 3)}h ${12 + person.sort_order * 4}m`;
 
   return (
     <main className="care-app-page">
       <div className="care-app-shell">
-        <aside className="care-sidebar" aria-label="Application navigation">
-          <Link className="care-sidebar-brand" href="/" aria-label="Safely home">
-            <span className="care-sidebar-mark">S</span>
-            <span>
-              <strong>Safely</strong>
-              <small>Care operations</small>
-            </span>
-          </Link>
-
-          <nav className="care-sidebar-nav" aria-label="Care workspace">
-            <Link className="care-sidebar-link" href="/app">
-              <span>D</span>
-              Dashboard
-            </Link>
-            <Link className="care-sidebar-link active" href="/app">
-              <span>P</span>
-              Profile
-            </Link>
-            <Link className="care-sidebar-link" href="/app/rules">
-              <span>R</span>
-              Rules
-            </Link>
-          </nav>
-
-          <div className="care-sidebar-status" aria-label="Current profile status">
-            <div>
-              <span aria-hidden="true" />
-              <strong>{person.alert === "offline" ? "Device offline" : "Live profile"}</strong>
-            </div>
-            <p>{person.last_seen_label}</p>
-          </div>
-        </aside>
+        <AppSidebar activePage="profile" />
 
         <section className="care-main person-profile-main" aria-label={`${person.name} profile`}>
           <div className="care-board person-profile-board">
             <header className="care-board-header person-profile-header">
               <div>
-                <Link className="person-back-link" href="/app">
+                <Link className="person-back-link" href="/app/dashboard">
                   Back to workspace
                 </Link>
                 <p className="care-board-eyebrow">Senior profile</p>
@@ -109,69 +70,127 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
             </header>
 
             <section className="person-profile-view">
-              <div className="person-profile-hero">
-                <Image
-                  src={image.photo}
-                  alt={`${person.name} portrait`}
-                  width={148}
-                  height={148}
-                  unoptimized={!image.hasPhoto}
-                />
-                <div>
-                  <p className="care-detail-kicker">Profile</p>
-                  <h2>{person.name}</h2>
-                  <p>
-                    Age {person.age}. {person.context || person.status}
-                  </p>
-                  <div className="person-profile-tags" aria-label="Profile status">
-                    <span>{person.care_group.replace("_", " ")}</span>
-                    <span>{person.last_seen_label}</span>
-                    <span>{formatWatchBattery(person.watch_battery_percent)} battery</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="person-profile-grid">
-                <section className="person-profile-panel heart-panel" aria-label="Heart rate trend">
-                  <header>
-                    <div>
-                      <p className="care-detail-kicker">Heart data</p>
-                      <h2>{formatHeartRate(person.heart_rate_bpm)}</h2>
+              <div className="person-profile-stack">
+                <section className="person-profile-card" aria-label="Profile summary">
+                  <div className="person-profile-top">
+                    <div className="person-profile-photo">
+                      <Image
+                        src={image.photo}
+                        alt={`${person.name} profile photo`}
+                        width={92}
+                        height={92}
+                        unoptimized
+                      />
                     </div>
-                    <span>
-                      {minHeartRate}-{maxHeartRate} bpm range
-                    </span>
-                  </header>
-                  <svg viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true">
-                    <path d={heartPath} fill="none" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <div className="heart-sample-row" aria-label="Recent heart rate samples">
-                    {samples.slice(-7).map((sample, index) => (
-                      <span key={`${person.id}-sample-${index}`}>{sample}</span>
-                    ))}
+                    <div className="person-profile-copy">
+                      <h2>{person.name}</h2>
+                      <p>
+                        Senior <span aria-hidden="true">&middot;</span> Age {person.age}
+                      </p>
+                    </div>
+                    <span className="person-status-pill">{person.status}</span>
+                  </div>
+                  <p className="person-profile-body">{person.context || person.status}</p>
+                  <div className="person-metric-row">
+                    <div className="person-metric-tile">
+                      <span>Location</span>
+                      <strong>Home</strong>
+                    </div>
+                    <div className="person-metric-tile">
+                      <span>Last seen</span>
+                      <strong>{person.last_seen_label}</strong>
+                    </div>
                   </div>
                 </section>
 
-                <section className="person-profile-panel medication-panel" aria-label="Medication schedule">
+                <section className="person-heart-card" aria-label="Heartbeat monitor">
+                  <header>
+                    <div>
+                      <p className="care-detail-kicker">Heartbeat monitor</p>
+                      <h2>{person.heart_rate_bpm ?? "--"}</h2>
+                      <span>beats per minute</span>
+                    </div>
+                    <div className="person-live-pill">
+                      <span aria-hidden="true" />
+                      Live
+                    </div>
+                  </header>
+
+                  <div className="person-heart-bars" aria-label="Recent heart rate samples">
+                    {heartBars.map((sample, index) => {
+                      const height = 28 + ((sample - minHeartRate) / heartRange) * 54;
+                      return (
+                        <span
+                          key={`${person.id}-heart-bar-${index}`}
+                          style={{ height: `${height}px` }}
+                          title={`${sample} bpm`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <p>
+                    Normal resting range for {person.name.split(" ")[0]}: {minHeartRate}-{maxHeartRate} bpm.
+                  </p>
+                </section>
+
+                <div className="person-metric-grid" aria-label="Care metrics">
+                  <div className="person-metric-tile">
+                    <span>Oxygen</span>
+                    <strong>{oxygenLevel}</strong>
+                  </div>
+                  <div className="person-metric-tile">
+                    <span>Steps</span>
+                    <strong>{stepCount}</strong>
+                  </div>
+                  <div className="person-metric-tile">
+                    <span>Sleep</span>
+                    <strong>{sleepDuration}</strong>
+                  </div>
+                  <div className="person-metric-tile">
+                    <span>Next med</span>
+                    <strong>{nextMedication}</strong>
+                  </div>
+                </div>
+
+                <section className="person-week-card" aria-label="Medication schedule">
                   <header>
                     <div>
                       <p className="care-detail-kicker">Medication</p>
-                      <h2>Weekly schedule</h2>
+                      <h2>Weekly medication</h2>
                     </div>
+                    <span className="person-week-summary">{nextMedication === "None" ? "No next dose" : `${nextMedication} next`}</span>
                   </header>
-                  <div className="person-medication-week">
+                  <div className="person-week-row" aria-label="Medication days">
+                    {dayLabels.map((label, index) => {
+                      const scheduled = (meds[index] ?? []).length > 0;
+                      return (
+                        <div className={scheduled ? "scheduled" : ""} key={`${person.id}-day-${index}`}>
+                          <span>{label}</span>
+                          <strong>{(meds[index] ?? []).length}</strong>
+                          <i aria-hidden="true" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="person-medication-list">
                     {dayNames.map((dayName, index) => {
                       const dayMeds = meds[index] ?? [];
                       return (
-                        <article key={`${person.id}-${dayName}`}>
-                          <span>{dayName}</span>
+                        <article className={dayMeds.length > 0 ? "has-meds" : ""} key={`${person.id}-${dayName}`}>
+                          <div className="person-medication-day">
+                            <span>{dayLabels[index]}</span>
+                            <strong>{dayName}</strong>
+                          </div>
                           {dayMeds.length === 0 ? (
                             <p>No scheduled meds</p>
                           ) : (
                             <ul>
                               {dayMeds.map((med) => (
                                 <li key={`${dayName}-${med.name}-${med.time}`}>
-                                  <strong>{med.name}</strong>
+                                  <span>
+                                    <strong>{med.name}</strong>
+                                    <em>Scheduled dose</em>
+                                  </span>
                                   <small>{med.time}</small>
                                 </li>
                               ))}
@@ -183,7 +202,7 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                   </div>
                 </section>
 
-                <section className="person-profile-panel alert-panel" aria-label="Active alerts">
+                <section className="person-alert-card" aria-label="Active alerts">
                   <header>
                     <div>
                       <p className="care-detail-kicker">Alerts</p>

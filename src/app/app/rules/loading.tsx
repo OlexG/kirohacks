@@ -1,11 +1,4 @@
-import Link from "next/link";
-
-const navItems = [
-  { label: "Dashboard", href: "/app" },
-  { label: "Roster", href: "/app?view=roster" },
-  { label: "Alerts", href: "/app?view=alerts" },
-  { label: "Rules", href: "/app/rules", active: true },
-];
+import { AppSidebar } from "../sidebar";
 
 function SkeletonLine({ className = "" }: Readonly<{ className?: string }>) {
   return <span className={`skeleton-line ${className}`} />;
@@ -15,35 +8,7 @@ export default function RulesLoading() {
   return (
     <main className="care-app-page">
       <div className="care-app-shell">
-        <aside className="care-sidebar" aria-label="Application navigation">
-          <Link className="care-sidebar-brand" href="/">
-            <span>Sa</span>
-            <div>
-              <strong>Safely</strong>
-              <small>Care operations</small>
-            </div>
-          </Link>
-          <nav className="care-sidebar-nav" aria-label="Workspace pages">
-            {navItems.map((item) => (
-              <Link
-                aria-current={item.active ? "page" : undefined}
-                className={item.active ? "active" : undefined}
-                href={item.href}
-                key={item.label}
-              >
-                <span aria-hidden="true">{item.label.slice(0, 1)}</span>
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="care-sidebar-status">
-            <span />
-            <div>
-              <strong>Live monitoring</strong>
-              <small>Rules backed by Supabase</small>
-            </div>
-          </div>
-        </aside>
+        <AppSidebar activePage="rules" />
 
         <section className="care-main rules-main" aria-label="Rules loading">
           <div className="care-board rules-board">

@@ -262,7 +262,7 @@ export default function Home() {
           <span>Safely</span>
         </a>
         <nav aria-label="Primary navigation">
-          <a href="/app">Demo</a>
+          <a href="/app/dashboard">Demo</a>
         </nav>
       </header>
 
@@ -275,7 +275,7 @@ export default function Home() {
             from one calm caretaker workspace.
           </p>
           <div className="hero-actions">
-            <a className="primary-button" href="/app">
+            <a className="primary-button" href="/app/dashboard">
               Demo
             </a>
             <a className="secondary-button" href="#platform">
@@ -383,7 +383,7 @@ export default function Home() {
             the product shape is clear.
           </p>
         </div>
-        <a className="primary-button" href="/app">
+        <a className="primary-button" href="/app/dashboard">
           Book demo
         </a>
       </section>
