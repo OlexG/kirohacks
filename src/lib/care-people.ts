@@ -85,6 +85,26 @@ const groupConfig: Record<
 const carePersonSelect =
   "id, name, age, care_group, status, heart_rate_bpm, last_seen_label, watch_battery_percent, initials, avatar, alert, context, active, sort_order, created_at, updated_at, sex, height_cm, assistive_device, impairment_tags, prior_falls_12mo, injurious_fall_12mo, unable_to_rise_after_fall_12mo, fall_rule_risk_score_100, fall_rule_instability_score_100, fall_rule_risk_level, fall_ml_risk_score_01, fall_ml_model_version, fall_risk_updated_at, walking_steadiness_class, walking_steadiness_score_01, walking_speed_mps, walking_step_length_m, walking_asymmetry_pct, walking_double_support_pct";
 
+function numberOrNull(value: unknown) {
+  const numberValue = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function normalizeCarePerson(row: unknown) {
+  const person = row as CarePerson;
+
+  return {
+    ...person,
+    height_cm: numberOrNull(person.height_cm),
+    fall_ml_risk_score_01: numberOrNull(person.fall_ml_risk_score_01),
+    walking_steadiness_score_01: numberOrNull(person.walking_steadiness_score_01),
+    walking_speed_mps: numberOrNull(person.walking_speed_mps),
+    walking_step_length_m: numberOrNull(person.walking_step_length_m),
+    walking_asymmetry_pct: numberOrNull(person.walking_asymmetry_pct),
+    walking_double_support_pct: numberOrNull(person.walking_double_support_pct),
+  } satisfies CarePerson;
+}
+
 export async function listCarePeople() {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
@@ -97,7 +117,7 @@ export async function listCarePeople() {
     throw new Error(`Unable to load care people: ${error.message}`);
   }
 
-  return (data ?? []) as CarePerson[];
+  return (data ?? []).map(normalizeCarePerson);
 }
 
 export async function getCarePerson(personId: string) {
@@ -113,7 +133,7 @@ export async function getCarePerson(personId: string) {
     throw new Error(`Unable to load person: ${error.message}`);
   }
 
-  return data as CarePerson | null;
+  return data ? normalizeCarePerson(data) : null;
 }
 
 export function formatHeartRate(heartRateBpm: number | null) {

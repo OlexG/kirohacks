@@ -19,6 +19,7 @@ export type MedicationRow = {
 
 export type MedicationDose = {
   id: string;
+  medicationId: string;
   name: string;
   dose: string;
   time: string;
@@ -86,6 +87,7 @@ export function buildMedicationWeek(medications: MedicationRow[]) {
           ...(week[dayIndex] ?? []),
           {
             id: `${medication.id}-${dayKey}-${entryIndex}`,
+            medicationId: medication.id,
             name: medication.name,
             dose,
             time,

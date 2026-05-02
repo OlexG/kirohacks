@@ -1,13 +1,16 @@
 "use client";
 
-import { useActionState, useMemo, useState, type CSSProperties } from "react";
+import { useActionState, useId, useMemo, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { CareAlertSeverity } from "@/lib/care-alerts";
+import { buildSuggestedNotificationText } from "@/lib/notification-copy";
 import type { CareProfile } from "@/lib/profiles";
 import {
+  sendTextNotificationAction,
   updateProfileNotificationNumberAction,
   type ProfileNumberActionState,
+  type TextNotificationActionState,
 } from "./actions";
 
 /* ------------------------------------------------------------------ */
@@ -84,6 +87,11 @@ const initialProfileNumberState: ProfileNumberActionState = {
   message: "",
 };
 
+const initialTextNotificationState: TextNotificationActionState = {
+  ok: false,
+  message: "",
+};
+
 function getContactHref(type: "call" | "message", phone: string | null | undefined) {
   if (!phone) return undefined;
   const normalized = phone.replace(/[^\d+]/g, "");
@@ -107,7 +115,12 @@ function CenterStage({
   const signal = getSignalGroup(alert);
   const routeTarget = profile?.notification_number ?? "no number set";
   const callHref = getContactHref("call", profile?.notification_number);
-  const messageHref = getContactHref("message", profile?.notification_number);
+  const suggestedTextFormId = useId();
+  const suggestedText = buildSuggestedNotificationText(alert, alert.person);
+  const [textState, textFormAction, isTextPending] = useActionState(
+    sendTextNotificationAction,
+    initialTextNotificationState,
+  );
 
   return (
     <article className={`room-center room-severity-${alert.severity}`} aria-label="Primary alert requiring response">
@@ -167,9 +180,15 @@ function CenterStage({
           </div>
         </div>
 
-        <div className="room-center-next">
-          <span>Next step</span>
-          <strong>{alert.next_step}</strong>
+        <div className="room-center-suggested">
+          <label htmlFor={`${suggestedTextFormId}-text`}>Suggested text</label>
+          <textarea
+            defaultValue={suggestedText}
+            form={profile?.notification_number ? suggestedTextFormId : undefined}
+            id={`${suggestedTextFormId}-text`}
+            name="suggested_text"
+            rows={3}
+          />
         </div>
 
         <div className="room-center-actions">
@@ -181,8 +200,13 @@ function CenterStage({
           ) : (
             <button className="room-action-secondary" disabled type="button">Call</button>
           )}
-          {messageHref ? (
-            <a className="room-action-secondary" href={messageHref}>Message</a>
+          {profile?.notification_number ? (
+            <form action={textFormAction} className="room-message-form" id={suggestedTextFormId}>
+              <input name="alert_id" type="hidden" value={alert.id} />
+              <button className="room-action-secondary" disabled={isTextPending} type="submit">
+                {isTextPending ? "Sending" : "Message"}
+              </button>
+            </form>
           ) : (
             <button className="room-action-secondary" disabled type="button">Message</button>
           )}
@@ -190,6 +214,9 @@ function CenterStage({
             Acknowledge
           </button>
         </div>
+        {textState.message ? (
+          <p className={`room-message-status ${textState.ok ? "success" : "error"}`}>{textState.message}</p>
+        ) : null}
       </div>
     </article>
   );
@@ -213,21 +240,6 @@ function OrbitTile({
   onClick: () => void;
 }>) {
   const signal = getSignalGroup(alert);
-  const orbitSlots = [
-    { x: 16, y: 22 },
-    { x: 84, y: 22 },
-    { x: 10, y: 48 },
-    { x: 90, y: 48 },
-    { x: 17, y: 74 },
-    { x: 83, y: 74 },
-    { x: 50, y: 12 },
-    { x: 50, y: 84 },
-  ];
-  const slot = orbitSlots[index % orbitSlots.length];
-  const severityDistance = alert.severity === "urgent" ? 0.94 : alert.severity === "warning" ? 1.04 : 1.12;
-  const cycleOffset = Math.floor(index / orbitSlots.length) * 4;
-  const x = 50 + (slot.x - 50) * severityDistance;
-  const y = 50 + (slot.y - 50) * severityDistance + cycleOffset;
 
   return (
     <button
@@ -237,9 +249,13 @@ function OrbitTile({
       onClick={onClick}
       style={
         {
-          "--orbit-x": `${x}%`,
-          "--orbit-y": `${y}%`,
+          "--orbit-depth": index,
           "--orbit-index": index,
+          "--orbit-total": total,
+          "--orbit-x": `${index * 18}px`,
+          "--orbit-y": `${(index - 2) * 70}px`,
+          "--orbit-scale": 1 - index * 0.035,
+          "--orbit-hover-scale": 1.02 - index * 0.02,
         } as CSSProperties
       }
       type="button"
@@ -448,7 +464,11 @@ export function AlertRoom({
   const dismissedAlerts = orderedAlerts.filter((a) => dismissedIds.has(a.id));
 
   const centerAlert = activeAlerts.find((a) => a.id === centerId) ?? activeAlerts[0] ?? null;
-  const orbitAlerts = activeAlerts.filter((a) => a.id !== centerAlert?.id);
+  const centerIndex = centerAlert ? activeAlerts.findIndex((a) => a.id === centerAlert.id) : -1;
+  const orbitAlerts =
+    centerIndex === -1 ? [] : [...activeAlerts.slice(centerIndex + 1), ...activeAlerts.slice(0, centerIndex)];
+  const previewAlerts = orbitAlerts.slice(0, 5);
+  const hiddenPreviewCount = Math.max(0, orbitAlerts.length - previewAlerts.length);
 
   const allPeople = people.length > 0 ? people : alerts.map((a) => a.person);
 
@@ -484,7 +504,7 @@ export function AlertRoom({
         {centerAlert ? (
           <>
             <div className="room-orbit" aria-label="Other active alerts">
-              {orbitAlerts.map((alert, i) => (
+              {previewAlerts.map((alert, i) => (
                 <OrbitTile
                   alert={alert}
                   index={i}
@@ -494,10 +514,25 @@ export function AlertRoom({
                   total={orbitAlerts.length}
                 />
               ))}
+              {hiddenPreviewCount > 0 ? (
+                <span
+                  className="room-orbit-more"
+                  style={
+                    {
+                      "--orbit-depth": previewAlerts.length,
+                      "--orbit-x": `${previewAlerts.length * 18}px`,
+                      "--orbit-y": `${(previewAlerts.length - 2) * 70}px`,
+                    } as CSSProperties
+                  }
+                >
+                  +{hiddenPreviewCount} more
+                </span>
+              ) : null}
             </div>
 
             <CenterStage
               alert={centerAlert}
+              key={centerAlert.id}
               onDismiss={handleDismiss}
               profile={profile}
             />

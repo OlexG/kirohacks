@@ -4,10 +4,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { listActiveCareAlertsForPerson } from "@/lib/care-alerts";
-import { buildHrSamples, buildMeds, dayLabels, dayNames } from "@/lib/care-demo-metrics";
+import { buildHrSamples } from "@/lib/care-demo-metrics";
 import { formatWatchBattery, getCarePerson } from "@/lib/care-people";
+import {
+  formatMlScore,
+  formatRiskScore,
+  listFallRiskObservationsForPerson,
+  type FallRiskObservation,
+} from "@/lib/fall-risk";
+import {
+  buildMedicationWeek,
+  dayLabels,
+  dayNames,
+  getNextMedicationLabel,
+  listMedicationsForPerson,
+} from "@/lib/medications";
 import { AppSidebar } from "../../sidebar";
 import { resolvePersonPhoto } from "@/lib/care-person-image";
+import { MedicationReminderButton } from "./medication-reminder-button";
 
 type PersonPageProps = {
   params: Promise<{ personId: string }>;
@@ -18,12 +32,112 @@ export const metadata: Metadata = {
   description: "Review senior medication schedule, watch status, and heart-rate trend.",
 };
 
+type ChartPoint = {
+  label: string;
+  value: number;
+};
+
+function formatNullable(value: number | string | boolean | null | undefined, fallback = "--") {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
+
+  return String(value);
+}
+
+function formatDecimal(value: number | null | undefined, digits = 2, suffix = "") {
+  if (value === null || value === undefined) {
+    return "--";
+  }
+
+  return `${value.toFixed(digits)}${suffix}`;
+}
+
+function formatClass(value: string | null | undefined) {
+  if (!value) {
+    return "--";
+  }
+
+  return value.replaceAll("_", " ");
+}
+
+function latestNumber(
+  observations: FallRiskObservation[],
+  selector: (observation: FallRiskObservation) => number | null,
+) {
+  return observations.find((observation) => selector(observation) !== null) ?? null;
+}
+
+function chartPoints(
+  observations: FallRiskObservation[],
+  selector: (observation: FallRiskObservation) => number | null,
+  limit = 16,
+) {
+  return observations
+    .filter((observation) => selector(observation) !== null)
+    .slice(0, limit)
+    .reverse()
+    .map((observation) => ({
+      label: new Date(observation.generated_at).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      value: selector(observation) ?? 0,
+    }));
+}
+
+function MiniLineChart({
+  label,
+  points,
+  suffix = "",
+}: Readonly<{ label: string; points: ChartPoint[]; suffix?: string }>) {
+  if (points.length < 2) {
+    return (
+      <article className="person-mini-chart empty">
+        <span>{label}</span>
+        <strong>No trend yet</strong>
+        <p>Waiting for fall-risk webhook data.</p>
+      </article>
+    );
+  }
+
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(max - min, 1);
+  const path = points
+    .map((point, index) => {
+      const x = points.length === 1 ? 0 : (index / (points.length - 1)) * 100;
+      const y = 92 - ((point.value - min) / range) * 74;
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+  const latest = points.at(-1);
+
+  return (
+    <article className="person-mini-chart">
+      <span>{label}</span>
+      <strong>
+        {latest?.value.toFixed(label.includes("Speed") ? 2 : 0)}
+        {suffix}
+      </strong>
+      <svg viewBox="0 0 100 100" role="img" aria-label={`${label} trend`}>
+        <path d="M 0 92 H 100" />
+        <path d={path} />
+      </svg>
+      <p>{latest?.label ?? "Latest"}</p>
+    </article>
+  );
+}
+
 export default async function PersonProfilePage({ params }: PersonPageProps) {
   await connection();
   const { personId } = await params;
-  const [person, alerts] = await Promise.all([
+  const [person, alerts, medications, fallRiskObservations] = await Promise.all([
     getCarePerson(personId),
     listActiveCareAlertsForPerson(personId),
+    listMedicationsForPerson(personId),
+    listFallRiskObservationsForPerson(personId),
   ]);
 
   if (!person) {
@@ -31,19 +145,55 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
   }
 
   const image = resolvePersonPhoto(person);
-  const meds = buildMeds(person.sort_order);
+  const meds = buildMedicationWeek(medications);
   const samples = buildHrSamples(person.heart_rate_bpm ?? 70, person.sort_order);
   const minHeartRate = Math.min(...samples);
   const maxHeartRate = Math.max(...samples);
-  const heartBars = samples.slice(-12);
-  const heartRange = Math.max(maxHeartRate - minHeartRate, 1);
-  const nextMedication =
-    Object.values(meds)
-      .flat()
-      .sort((first, second) => first.time.localeCompare(second.time))[0]?.time ?? "None";
-  const oxygenLevel = `${96 + (person.sort_order % 3)}%`;
-  const stepCount = (1800 + (person.sort_order % 20) * 312).toLocaleString("en-US");
-  const sleepDuration = `${6 + (person.sort_order % 3)}h ${12 + (person.sort_order % 10) * 4}m`;
+  const nextMedication = getNextMedicationLabel(meds);
+  const totalScheduledDoses = Object.values(meds).flat().length;
+  const ruleRiskScore =
+    person.fall_rule_risk_score_100 ??
+    latestNumber(fallRiskObservations, (observation) => observation.rule_risk_score_100)
+      ?.rule_risk_score_100 ??
+    null;
+  const instabilityScore =
+    person.fall_rule_instability_score_100 ??
+    latestNumber(fallRiskObservations, (observation) => observation.rule_instability_score_100)
+      ?.rule_instability_score_100 ??
+    null;
+  const ruleRiskLevel =
+    person.fall_rule_risk_level ??
+    latestNumber(fallRiskObservations, (observation) => observation.rule_risk_score_100)
+      ?.rule_risk_level ??
+    null;
+  const mlScore =
+    person.fall_ml_risk_score_01 ??
+    latestNumber(fallRiskObservations, (observation) => observation.ml_risk_score_01)
+      ?.ml_risk_score_01 ??
+    null;
+  const steadinessClass =
+    person.walking_steadiness_class ??
+    latestNumber(fallRiskObservations, (observation) => observation.walking_steadiness_score_01)
+      ?.walking_steadiness_class ??
+    null;
+  const recentInstabilityEvents = fallRiskObservations.filter(
+    (observation) => observation.message_type === "instability_event",
+  );
+  const highInstabilityEvents = recentInstabilityEvents.filter((observation) => observation.severity === "high");
+  const mobilitySpeed =
+    person.walking_speed_mps ??
+    latestNumber(fallRiskObservations, (observation) => observation.walking_speed_mps)
+      ?.walking_speed_mps ??
+    null;
+  const cadence =
+    latestNumber(fallRiskObservations, (observation) => observation.cadence_spm)?.cadence_spm ?? null;
+  const riskChart = chartPoints(fallRiskObservations, (observation) => observation.rule_risk_score_100);
+  const instabilityChart = chartPoints(
+    fallRiskObservations,
+    (observation) => observation.rule_instability_score_100,
+  );
+  const heartChart = chartPoints(fallRiskObservations, (observation) => observation.heart_rate_bpm);
+  const mobilityChart = chartPoints(fallRiskObservations, (observation) => observation.walking_speed_mps);
 
   return (
     <main className="care-app-page">
@@ -105,64 +255,125 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                         <strong>{person.heart_rate_bpm ?? "--"} bpm</strong>
                       </div>
                       <div>
-                        <span>Oxygen</span>
-                        <strong>{oxygenLevel}</strong>
+                        <span>Rule risk</span>
+                        <strong>{formatRiskScore(ruleRiskScore)}</strong>
                       </div>
                       <div>
                         <span>Next med</span>
-                        <strong>{nextMedication}</strong>
+                        <strong>{nextMedication === "None" ? "None" : nextMedication}</strong>
                       </div>
                     </div>
                   </div>
                 </article>
 
-                <section className="person-orbit-card person-orbit-heart" aria-label="Heartbeat monitor">
+                <section className="person-orbit-card person-orbit-heart" aria-label="Rule risk">
                   <header>
                     <div>
-                      <p className="care-detail-kicker">Heartbeat</p>
-                      <strong>{person.heart_rate_bpm ?? "--"}</strong>
-                      <span>bpm now</span>
+                      <p className="care-detail-kicker">Rule Risk</p>
+                      <strong>{formatRiskScore(ruleRiskScore)}</strong>
+                      <span>{formatClass(ruleRiskLevel)}</span>
                     </div>
                     <div className="person-live-pill">
                       <span aria-hidden="true" />
-                      Live
+                      Rule
                     </div>
                   </header>
-                  <div className="person-heart-bars" aria-label="Recent heart rate samples">
-                    {heartBars.map((sample, index) => {
-                      const height = 24 + ((sample - minHeartRate) / heartRange) * 46;
-                      return (
-                        <span
-                          key={`${person.id}-heart-bar-${index}`}
-                          style={{ height: `${height}px` }}
-                          title={`${sample} bpm`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <p>{minHeartRate}-{maxHeartRate} bpm recent range</p>
+                  <p>Transparent score from thresholds and baselines.</p>
                 </section>
 
-                <section className="person-orbit-card person-orbit-watch" aria-label="Watch status">
-                  <span>Watch</span>
-                  <strong>{formatWatchBattery(person.watch_battery_percent)}</strong>
-                  <p>{person.status}</p>
+                <section className="person-orbit-card person-orbit-watch" aria-label="Experimental ML score">
+                  <span>Experimental ML</span>
+                  <strong>{formatMlScore(mlScore)}</strong>
+                  <p>{person.fall_ml_model_version ?? "Non-clinical estimate"}</p>
                 </section>
 
-                <section className="person-orbit-card person-orbit-motion" aria-label="Movement">
-                  <span>Movement</span>
-                  <strong>{stepCount}</strong>
-                  <p>steps today</p>
+                <section className="person-orbit-card person-orbit-motion" aria-label="Walking steadiness">
+                  <span>Walking steadiness</span>
+                  <strong>{formatClass(steadinessClass)}</strong>
+                  <p>{mobilitySpeed === null ? "Speed pending" : `${mobilitySpeed.toFixed(2)} m/s`}</p>
                 </section>
 
-                <section className="person-orbit-card person-orbit-rest" aria-label="Rest">
-                  <span>Sleep</span>
-                  <strong>{sleepDuration}</strong>
-                  <p>last night</p>
+                <section className="person-orbit-card person-orbit-rest" aria-label="Recent instability">
+                  <span>Recent instability</span>
+                  <strong>{instabilityScore === null ? recentInstabilityEvents.length : formatRiskScore(instabilityScore)}</strong>
+                  <p>
+                    {recentInstabilityEvents.length} events · {highInstabilityEvents.length} high
+                  </p>
                 </section>
               </div>
 
               <div className="person-room-tray">
+                <section className="person-profile-data-card" aria-label="Fall-risk profile data">
+                  <header>
+                    <div>
+                      <p className="care-detail-kicker">Profile</p>
+                      <h2>Fall-risk profile</h2>
+                    </div>
+                    <span>{person.fall_risk_updated_at ? "Live from webhook" : "Awaiting webhook"}</span>
+                  </header>
+                  <div className="person-profile-data-grid">
+                    <div>
+                      <span>Sex</span>
+                      <strong>{formatClass(person.sex)}</strong>
+                    </div>
+                    <div>
+                      <span>Height</span>
+                      <strong>{person.height_cm === null ? "--" : `${Number(person.height_cm).toFixed(0)} cm`}</strong>
+                    </div>
+                    <div>
+                      <span>Assistive device</span>
+                      <strong>{formatClass(person.assistive_device)}</strong>
+                    </div>
+                    <div>
+                      <span>Prior falls</span>
+                      <strong>{formatNullable(person.prior_falls_12mo)}</strong>
+                    </div>
+                    <div>
+                      <span>Injurious fall</span>
+                      <strong>{person.injurious_fall_12mo === null ? "--" : person.injurious_fall_12mo ? "Yes" : "No"}</strong>
+                    </div>
+                    <div>
+                      <span>Unable to rise</span>
+                      <strong>
+                        {person.unable_to_rise_after_fall_12mo === null
+                          ? "--"
+                          : person.unable_to_rise_after_fall_12mo
+                            ? "Yes"
+                            : "No"}
+                      </strong>
+                    </div>
+                  </div>
+                  <div className="person-tags">
+                    {(person.impairment_tags ?? []).length === 0 ? (
+                      <span>No impairment tags yet</span>
+                    ) : (
+                      (person.impairment_tags ?? []).map((tag) => <span key={tag}>{tag}</span>)
+                    )}
+                  </div>
+                </section>
+
+                <section className="person-chart-card" aria-label="Fall-risk time series">
+                  <header>
+                    <div>
+                      <p className="care-detail-kicker">Time series</p>
+                      <h2>Monitoring trends</h2>
+                    </div>
+                    <span>{fallRiskObservations.length} samples</span>
+                  </header>
+                  <div className="person-chart-grid">
+                    <MiniLineChart label="Rule Risk" points={riskChart} />
+                    <MiniLineChart label="Instability" points={instabilityChart} />
+                    <MiniLineChart label="Heart Rate" points={heartChart} suffix=" bpm" />
+                    <MiniLineChart label="Speed" points={mobilityChart} suffix=" m/s" />
+                  </div>
+                  <div className="person-latest-strip">
+                    <span>Cadence {formatDecimal(cadence, 0, " spm")}</span>
+                    <span>Asymmetry {formatDecimal(person.walking_asymmetry_pct, 1, "%")}</span>
+                    <span>Double support {formatDecimal(person.walking_double_support_pct, 1, "%")}</span>
+                    <span>HR range {minHeartRate}-{maxHeartRate} bpm</span>
+                  </div>
+                </section>
+
                 <section className="person-week-card" aria-label="Medication schedule">
                   <header>
                     <div>
@@ -171,6 +382,20 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                     </div>
                     <span className="person-week-summary">{nextMedication === "None" ? "No next dose" : `${nextMedication} next`}</span>
                   </header>
+                  <div className="person-medication-overview">
+                    <div>
+                      <span>Next dose</span>
+                      <strong>{nextMedication === "None" ? "No scheduled dose" : nextMedication}</strong>
+                    </div>
+                    <div>
+                      <span>Medications</span>
+                      <strong>{medications.length}</strong>
+                    </div>
+                    <div>
+                      <span>Weekly doses</span>
+                      <strong>{totalScheduledDoses}</strong>
+                    </div>
+                  </div>
                   <div className="person-week-row" aria-label="Medication days">
                     {dayLabels.map((label, index) => {
                       const scheduled = (meds[index] ?? []).length > 0;
@@ -178,7 +403,7 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                         <div className={scheduled ? "scheduled" : ""} key={`${person.id}-day-${index}`}>
                           <span>{label}</span>
                           <strong>{(meds[index] ?? []).length}</strong>
-                          <i aria-hidden="true" />
+                          <i aria-hidden="true">{scheduled ? "set" : "none"}</i>
                         </div>
                       );
                     })}
@@ -198,11 +423,20 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                             <ul>
                               {dayMeds.map((med) => (
                                 <li key={`${dayName}-${med.name}-${med.time}`}>
+                                  <small>{med.time}</small>
                                   <span>
                                     <strong>{med.name}</strong>
-                                    <em>Scheduled dose</em>
+                                    <em>
+                                      {med.dose}
+                                      {med.deliveryMethod ? ` · ${med.deliveryMethod}` : ""}
+                                    </em>
                                   </span>
-                                  <small>{med.time}</small>
+                                  <MedicationReminderButton
+                                    dayName={dayName}
+                                    dose={med.dose}
+                                    medicationId={med.medicationId}
+                                    time={med.time}
+                                  />
                                 </li>
                               ))}
                             </ul>
