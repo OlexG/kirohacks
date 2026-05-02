@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { CareAlert, CareAlertSeverity } from "@/lib/care-alerts";
@@ -9,10 +9,6 @@ import { resolvePersonPhoto } from "@/lib/care-person-image";
 import type { CareProfile } from "@/lib/profiles";
 import { AppSidebar } from "./sidebar";
 import { AlertRoom, type RoomAlert, type RoomPerson } from "./alert-room";
-import {
-  updateProfileNotificationNumberAction,
-  type ProfileNumberActionState,
-} from "./actions";
 
 export type CareView = "dashboard" | "roster" | "alerts";
 
@@ -28,11 +24,6 @@ type RosterAlert = CareAlert & {
 
 type RosterGroup = Omit<CarePeopleGroup, "people"> & {
   people: RosterPerson[];
-};
-
-const initialProfileNumberState: ProfileNumberActionState = {
-  ok: false,
-  message: "",
 };
 
 const careViews: Record<CareView, { eyebrow: string; title: string }> = {
@@ -348,35 +339,6 @@ function AlertTrend({ alerts }: Readonly<{ alerts: RosterAlert[] }>) {
   );
 }
 
-const alertSeverityLabels: Record<CareAlertSeverity, string> = {
-  info: "Info",
-  warning: "Review",
-  urgent: "Urgent",
-};
-
-const alertSignalGroups = [
-  { match: "fall", label: "Fall" },
-  { match: "heart", label: "Heart" },
-  { match: "oxygen", label: "Oxygen" },
-  { match: "movement", label: "Movement" },
-  { match: "inactive", label: "Movement" },
-  { match: "offline", label: "Device" },
-  { match: "battery", label: "Device" },
-  { match: "sleep", label: "Sleep" },
-  { match: "medication", label: "Medication" },
-  { match: "check", label: "Check-in" },
-  { match: "location", label: "Location" },
-] satisfies Array<{ match: string; label: string }>;
-
-function getAlertSignalGroup(alert: CareAlert) {
-  const signal = `${alert.alert_key} ${alert.signal_label} ${alert.title}`.toLowerCase();
-  return alertSignalGroups.find((group) => signal.includes(group.match))?.label ?? "Custom";
-}
-
-function getAlertCount(alerts: RosterAlert[], severity: CareAlertSeverity) {
-  return alerts.filter((alert) => alert.severity === severity).length;
-}
-
 function DashboardOverview({ alerts, groups }: Readonly<{ alerts: RosterAlert[]; groups: RosterGroup[] }>) {
   const people = groups.flatMap((group) => group.people);
 
@@ -512,226 +474,6 @@ function PersonCard({ person }: Readonly<{ person: RosterPerson }>) {
         </span>
       ) : null}
     </Link>
-  );
-}
-
-function AlertQueueView({
-  alerts,
-  profile,
-}: Readonly<{
-  alerts: RosterAlert[];
-  profile: CareProfile | null;
-}>) {
-  const [selectedAlertId, setSelectedAlertId] = useState(alerts[0]?.id ?? "");
-  const [state, formAction, isPending] = useActionState(
-    updateProfileNotificationNumberAction,
-    initialProfileNumberState,
-  );
-  const alertCountLabel = alerts.length === 1 ? "1 open alert" : `${alerts.length} open alerts`;
-  const selectedAlert = alerts.find((alert) => alert.id === selectedAlertId) ?? alerts[0] ?? null;
-  const routeLabel = profile?.notification_number ? `Routing to ${profile.notification_number}` : "No routing number";
-  const routeTarget = profile?.notification_number ?? "no notification number";
-  const severitySummary = [
-    { key: "urgent", label: "Urgent", value: getAlertCount(alerts, "urgent") },
-    { key: "warning", label: "Review", value: getAlertCount(alerts, "warning") },
-    { key: "info", label: "Info", value: getAlertCount(alerts, "info") },
-  ] satisfies Array<{ key: CareAlertSeverity; label: string; value: number }>;
-
-  return (
-    <div className="alerts-workspace">
-      <section className="alerts-command-bar" aria-label="Alert command center">
-        <div className="alerts-command-copy">
-          <p className="care-detail-kicker">Live queue</p>
-          <h2>Everything that needs a response</h2>
-        </div>
-
-        <div className="alerts-summary-strip" aria-label="Open alerts by severity">
-          {severitySummary.map((item) => (
-            <span className={item.key} key={item.key}>
-              <strong>{item.value}</strong>
-              {item.label}
-            </span>
-          ))}
-          <span>
-            <strong>{alerts.length}</strong>
-            Total
-          </span>
-        </div>
-
-        <form action={formAction} className="profile-number-form alerts-route-form">
-          <label>
-            Notify
-            <input
-              autoComplete="tel"
-              defaultValue={profile?.notification_number ?? ""}
-              inputMode="tel"
-              name="notification_number"
-              placeholder="+1 (555) 010-0199"
-              type="tel"
-            />
-          </label>
-          <button className="care-detail-action" disabled={isPending} type="submit">
-            {isPending ? "Saving" : "Save"}
-          </button>
-          <p className={state.message ? (state.ok ? "success" : "error") : undefined}>
-            {state.message || routeLabel}
-          </p>
-        </form>
-      </section>
-
-      <section className="alerts-one-page" aria-label="Active alert response workspace">
-        <div className="care-alert-table-panel alerts-queue-panel">
-          <header className="care-alert-table-header">
-            <div>
-              <p className="care-detail-kicker">Inbox</p>
-              <h2>Active alerts</h2>
-            </div>
-            <span>{alertCountLabel}</span>
-          </header>
-
-          {alerts.length === 0 ? (
-            <article className="care-detail-card alerts-empty-card">
-              <div>
-                <h2>No active alerts</h2>
-                <p>New urgent, review, device, medication, and custom-rule alerts will appear here.</p>
-              </div>
-            </article>
-          ) : (
-            <div className="alerts-list" role="list">
-              {alerts.map((alert) => {
-                const isSelected = selectedAlert?.id === alert.id;
-
-                return (
-                  <button
-                    aria-pressed={isSelected}
-                    className={`alerts-list-row ${alert.severity}${isSelected ? " selected" : ""}`}
-                    key={alert.id}
-                    onClick={() => setSelectedAlertId(alert.id)}
-                    type="button"
-                  >
-                    <span className="alerts-row-person">
-                      <Image
-                        src={alert.person.photo}
-                        alt={`${alert.person.name} portrait`}
-                        width={34}
-                        height={34}
-                        unoptimized={!alert.person.hasPhoto}
-                      />
-                      <span>
-                        <strong>{alert.person.name}</strong>
-                        <small>{getAlertSignalGroup(alert)}</small>
-                      </span>
-                    </span>
-                    <span className="alerts-row-main">
-                      <span>
-                        <i>{alertSeverityLabels[alert.severity]}</i>
-                        <strong>{alert.title}</strong>
-                      </span>
-                      <small>{alert.summary}</small>
-                    </span>
-                    <span className="alerts-row-metric">
-                      <small>{alert.metric_label}</small>
-                      <strong>{alert.metric_value}</strong>
-                    </span>
-                    <span className="alerts-row-time">{alert.triggered_label}</span>
-                    <span className="alerts-row-next">{alert.next_step}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <aside className="alerts-detail-panel" aria-label="Selected alert details">
-          {selectedAlert ? (
-            <>
-              <header className={`alerts-detail-header ${selectedAlert.severity}`}>
-                <span>{alertSeverityLabels[selectedAlert.severity]}</span>
-                <h2>{selectedAlert.title}</h2>
-                <p>
-                  {selectedAlert.person.name} - {getAlertSignalGroup(selectedAlert)} - {selectedAlert.triggered_label}
-                </p>
-              </header>
-
-              <div className="alerts-detail-person">
-                <Image
-                  src={selectedAlert.person.photo}
-                  alt={`${selectedAlert.person.name} portrait`}
-                  width={46}
-                  height={46}
-                  unoptimized={!selectedAlert.person.hasPhoto}
-                />
-                <div>
-                  <Link className="care-dashboard-person-link" href={`/app/people/${selectedAlert.person.id}`}>
-                    {selectedAlert.person.name}
-                  </Link>
-                  <span>
-                    Age {selectedAlert.person.age} - {selectedAlert.person.status}
-                  </span>
-                </div>
-              </div>
-
-              <div className="alerts-detail-summary">
-                <p>{selectedAlert.summary}</p>
-              </div>
-
-              <dl className="alerts-detail-grid">
-                <div>
-                  <dt>Signal</dt>
-                  <dd>{selectedAlert.signal_label}</dd>
-                </div>
-                <div>
-                  <dt>{selectedAlert.metric_label}</dt>
-                  <dd>{selectedAlert.metric_value}</dd>
-                </div>
-                <div>
-                  <dt>Status</dt>
-                  <dd>{selectedAlert.status}</dd>
-                </div>
-                <div>
-                  <dt>Opened</dt>
-                  <dd>{selectedAlert.triggered_label}</dd>
-                </div>
-              </dl>
-
-              <section className="alerts-next-step" aria-label="Suggested next step">
-                <p className="care-detail-kicker">Next step</p>
-                <strong>{selectedAlert.next_step}</strong>
-              </section>
-
-              <section className="alerts-timeline" aria-label="Alert timeline">
-                <span>
-                  <i />
-                  Triggered by {selectedAlert.signal_label}
-                </span>
-                <span>
-                  <i />
-                  Routed to {routeTarget}
-                </span>
-                <span>
-                  <i />
-                  Waiting for caregiver acknowledgement
-                </span>
-              </section>
-
-              <div className="alerts-detail-actions" aria-label="Alert actions">
-                <button type="button">Call</button>
-                <button type="button">Message</button>
-                <button type="button">Snooze</button>
-                <Link className="care-detail-action" href={`/app/people/${selectedAlert.person.id}`}>
-                  Review
-                </Link>
-              </div>
-            </>
-          ) : (
-            <div className="alerts-detail-empty">
-              <h2>No alert selected</h2>
-              <p>Active alerts will open here for quick triage.</p>
-            </div>
-          )}
-        </aside>
-      </section>
-    </div>
   );
 }
 

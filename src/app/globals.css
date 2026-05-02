@@ -8316,10 +8316,10 @@ button.care-sidebar-link {
 
 .room-center {
   --room-glow: rgba(184, 74, 60, 0.2);
-  max-width: min(680px, 58vw);
+  max-width: min(620px, 52vw);
   position: relative;
   width: 100%;
-  z-index: 2;
+  z-index: 4;
 }
 
 .room-center.room-severity-warning {
@@ -8613,7 +8613,7 @@ button.care-sidebar-link {
   inset: 0;
   pointer-events: none;
   position: absolute;
-  z-index: 1;
+  z-index: 2;
 }
 
 .room-orbit-tile {
@@ -8630,15 +8630,15 @@ button.care-sidebar-link {
   font: inherit;
   gap: 10px;
   left: var(--orbit-x);
-  min-height: 68px;
-  padding: 10px 14px;
+  min-height: 56px;
+  padding: 8px 12px;
   pointer-events: auto;
   position: absolute;
   top: var(--orbit-y);
   transform: translate(-50%, -50%);
   transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
   white-space: nowrap;
-  z-index: 1;
+  z-index: 2;
 }
 
 .room-orbit-tile:hover,
@@ -8674,7 +8674,7 @@ button.care-sidebar-link {
 
 .room-orbit-photo img {
   border: 1px solid var(--care-border);
-  border-radius: 10px;
+  border-radius: 8px;
   display: block;
 }
 
@@ -8702,7 +8702,7 @@ button.care-sidebar-link {
 
 .room-orbit-name {
   color: var(--care-primary);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 720;
 }
 

@@ -213,13 +213,21 @@ function OrbitTile({
   onClick: () => void;
 }>) {
   const signal = getSignalGroup(alert);
-
-  // Distribute tiles in an arc above and around center
-  const angle = total <= 1 ? 0 : -72 + (144 / (total - 1)) * index;
-  const distance = alert.severity === "urgent" ? 0.62 : alert.severity === "warning" ? 0.82 : 1;
-  const radians = (angle * Math.PI) / 180;
-  const x = 50 + Math.sin(radians) * distance * 42;
-  const y = 18 + (1 - Math.cos(radians)) * distance * 22;
+  const orbitSlots = [
+    { x: 24, y: 22 },
+    { x: 76, y: 22 },
+    { x: 16, y: 48 },
+    { x: 84, y: 48 },
+    { x: 25, y: 74 },
+    { x: 75, y: 74 },
+    { x: 50, y: 12 },
+    { x: 50, y: 84 },
+  ];
+  const slot = orbitSlots[index % orbitSlots.length];
+  const severityDistance = alert.severity === "urgent" ? 0.82 : alert.severity === "warning" ? 0.96 : 1.08;
+  const cycleOffset = Math.floor(index / orbitSlots.length) * 4;
+  const x = 50 + (slot.x - 50) * severityDistance;
+  const y = 50 + (slot.y - 50) * severityDistance + cycleOffset;
 
   return (
     <button
@@ -240,8 +248,8 @@ function OrbitTile({
         <Image
           src={alert.person.photo}
           alt={alert.person.name}
-          width={44}
-          height={44}
+          width={38}
+          height={38}
           unoptimized={!alert.person.hasPhoto}
         />
         <span className={`room-orbit-pip ${alert.severity}`} aria-hidden="true" />
