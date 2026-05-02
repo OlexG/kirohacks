@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Elsa
+
+Elsa is an Elder-living safety assistant for seniors, families, and professional care teams.
 
 ## Getting Started
 

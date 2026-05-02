@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CarePage } from "../care-page";
 
 export const metadata: Metadata = {
-  title: "Safely App | Dashboard",
+  title: "Elsa App | Dashboard",
   description: "Manage seniors, watch signals, and caretaker alerts.",
 };
 

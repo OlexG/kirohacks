@@ -259,7 +259,7 @@ export default function Home() {
           <span className="brand-mark">
             <HeartIcon />
           </span>
-          <span>Safely</span>
+          <span>Elsa</span>
         </a>
         <nav aria-label="Primary navigation">
           <a href="/app/dashboard">Demo</a>
@@ -268,8 +268,8 @@ export default function Home() {
 
       <section id="top" className="hero-section">
         <div className="hero-copy">
-          <p className="announcement">Apple Watch safety signals for care teams</p>
-          <h1>A real-time dashboard for seniors and the people who care for them</h1>
+          <p className="announcement">Elsa: Elder-living safety assistant</p>
+          <h1>A real-time safety assistant for seniors and the people who care for them</h1>
           <p>
             Monitor fall events, heart rate changes, watch connectivity, and custom safety rules
             from one calm caretaker workspace.
@@ -303,7 +303,7 @@ export default function Home() {
 
       <section id="platform" className="module-section">
         <div className="section-heading">
-          <p className="eyebrow">Get to know Safely</p>
+          <p className="eyebrow">Get to know Elsa</p>
           <h2>One workspace for every care signal</h2>
           <p>
             Give caretakers a focused view of Apple Watch events, senior status, and the alerts
@@ -395,9 +395,9 @@ export default function Home() {
               <span className="brand-mark">
                 <HeartIcon />
               </span>
-              <span>Safely</span>
+              <span>Elsa</span>
             </a>
-            <p>Real-time safety monitoring for seniors, families, and professional care teams.</p>
+            <p>Elder-living safety assistance for seniors, families, and professional care teams.</p>
           </div>
           <div>
             <h3>Platform</h3>

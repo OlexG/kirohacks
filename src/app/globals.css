@@ -8657,7 +8657,7 @@ button.care-sidebar-link {
   display: flex;
   justify-content: center;
   min-height: 0;
-  padding: 24px clamp(18px, 4vw, 54px) 24px clamp(190px, 22vw, 300px);
+  padding: 24px clamp(18px, 4vw, 54px);
   position: relative;
 }
 
@@ -8990,12 +8990,12 @@ button.care-sidebar-link {
 
 .room-orbit {
   height: min(500px, 78%);
-  left: calc(50% - min(310px, 25vw) - clamp(132px, 13vw, 178px));
+  left: clamp(14px, 3vw, 36px);
   pointer-events: none;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: clamp(230px, 25vw, 330px);
+  width: clamp(210px, 20vw, 260px);
   z-index: 2;
 }
 
@@ -9028,7 +9028,7 @@ button.care-sidebar-link {
     border-color 200ms ease,
     opacity 200ms ease;
   white-space: nowrap;
-  width: clamp(210px, 23vw, 290px);
+  width: clamp(210px, 20vw, 260px);
   z-index: calc(8 - var(--orbit-depth, 0));
 }
 

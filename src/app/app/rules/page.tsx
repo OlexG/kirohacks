@@ -6,7 +6,7 @@ import { AppSidebar } from "../sidebar";
 import { RulesWorkspace } from "./rules-client";
 
 export const metadata: Metadata = {
-  title: "Safely App | Rules",
+  title: "Elsa App | Rules",
   description: "Configure Apple Watch and HealthKit monitoring rules.",
 };
 

@@ -44,11 +44,11 @@ function SidebarLink({
 export function AppSidebar({ activePage }: Readonly<{ activePage?: AppPage }>) {
   return (
     <aside className="care-sidebar" aria-label="Application navigation">
-      <Link className="care-sidebar-brand" href="/" aria-label="Safely home">
-        <span>Sa</span>
+      <Link className="care-sidebar-brand" href="/" aria-label="Elsa home">
+        <span>El</span>
         <span>
-          <strong>Safely</strong>
-          <small>Care operations</small>
+          <strong>Elsa</strong>
+          <small>Elder-living safety assistant</small>
         </span>
       </Link>
 

@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Safely | Senior Safety Dashboard",
+  title: "Elsa | Elder-living Safety Assistant",
   description:
-    "A real-time safety dashboard for seniors and the people who care for them.",
+    "Elder-living safety assistant for seniors and the people who care for them.",
 };
 
 export default function RootLayout({

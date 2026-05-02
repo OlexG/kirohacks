@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AppSidebar } from "../sidebar";
 
 export const metadata: Metadata = {
-  title: "Safely App | Settings",
+  title: "Elsa App | Settings",
   description: "Manage care workspace settings.",
 };
 

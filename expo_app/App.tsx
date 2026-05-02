@@ -880,8 +880,8 @@ export default function App() {
           <View style={styles.brandRow}>
             <HeartMark />
             <View>
-              <Text style={styles.brandName}>Safely</Text>
-              <Text style={styles.brandSub}>Primary caregiver</Text>
+              <Text style={styles.brandName}>Elsa</Text>
+              <Text style={styles.brandSub}>Elder-living safety assistant</Text>
             </View>
           </View>
           <Text style={styles.headerPill}>Live</Text>

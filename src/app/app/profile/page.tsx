@@ -4,7 +4,7 @@ import { getDemoProfile } from "@/lib/profiles";
 import { AppSidebar } from "../sidebar";
 
 export const metadata: Metadata = {
-  title: "Safely App | Profile",
+  title: "Elsa App | Profile",
   description: "Manage the demo caregiver profile.",
 };
 

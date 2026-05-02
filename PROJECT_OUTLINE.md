@@ -1,8 +1,8 @@
-# Project Outline
+# Elsa Project Outline
 
 ## Working Concept
 
-A real-time safety dashboard for seniors and the people who care for them.
+Elsa is an Elder-living safety assistant: a real-time safety dashboard for seniors and the people who care for them.
 
 Seniors wear Apple Watches that track health signals, movement, fall events, and other safety-related data. Caretakers use a dashboard to monitor everyone they are responsible for, receive urgent alerts, and customize safety rules for each person.
 

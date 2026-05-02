@@ -28,7 +28,7 @@ const SABAWOON_HAKIMI_PERSON_ID = "person-sabawoon-hakimi";
 
 function buildAlertSms(alert: AlertNotificationRow, person: AlertPersonRow, suggestedText: string) {
   const parts = [
-    `Safely notification for ${person.name}: ${alert.title}.`,
+    `Elsa notification for ${person.name}: ${alert.title}.`,
     alert.summary,
     `${alert.metric_label}: ${alert.metric_value}.`,
     `Triggered: ${alert.triggered_label}.`,

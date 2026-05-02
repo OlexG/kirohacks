@@ -1,4 +1,4 @@
-# User Stories — Apple Watch Monitorable Data
+# Elsa User Stories — Apple Watch Monitorable Data
 
 These user stories are scoped to what Apple Watch hardware and HealthKit APIs can realistically provide to a third-party app. Each story notes the underlying data source and any relevant constraints.
 

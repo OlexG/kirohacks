@@ -28,7 +28,7 @@ type PersonPageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Safely App | Senior Profile",
+  title: "Elsa App | Senior Profile",
   description: "Review senior medication schedule, watch status, and heart-rate trend.",
 };
 
