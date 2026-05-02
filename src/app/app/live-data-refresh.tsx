@@ -40,7 +40,9 @@ export function LiveDataRefresh({
   const [isPending, startTransition] = useTransition();
   const [progress, setProgress] = useState(0);
   const [receivedUpdate, setReceivedUpdate] = useState(false);
+  const [refreshPulse, setRefreshPulse] = useState(false);
   const intervalRef = useRef<number | null>(null);
+  const pendingRef = useRef(false);
   const progressRef = useRef<number | null>(null);
   const refreshStartedAtRef = useRef<number>(0);
   const previousWatchedKeyRef = useRef<string | null | undefined>(watchedKey);
@@ -81,6 +83,32 @@ export function LiveDataRefresh({
   }, [intervalMs, router]);
 
   useEffect(() => {
+    if (pendingRef.current && !isPending) {
+      setRefreshPulse(true);
+      const timeout = window.setTimeout(() => setRefreshPulse(false), 1200);
+      pendingRef.current = isPending;
+      return () => window.clearTimeout(timeout);
+    }
+
+    pendingRef.current = isPending;
+  }, [isPending]);
+
+  useEffect(() => {
+    if (variant !== "profile") {
+      return;
+    }
+
+    if (isPending) {
+      document.body.dataset.profileRefreshState = "refreshing";
+      return () => {
+        delete document.body.dataset.profileRefreshState;
+      };
+    }
+
+    delete document.body.dataset.profileRefreshState;
+  }, [isPending, variant]);
+
+  useEffect(() => {
     if (!watchedKey || previousWatchedKeyRef.current === watchedKey) {
       previousWatchedKeyRef.current = watchedKey;
       return;
@@ -107,14 +135,16 @@ export function LiveDataRefresh({
 
   return (
     <div
-      className={`profile-live-console${receivedUpdate ? " updated" : ""}${isPending ? " refreshing" : ""}`}
+      className={`profile-live-console${receivedUpdate ? " updated" : ""}${isPending ? " refreshing" : ""}${
+        refreshPulse ? " pulse" : ""
+      }`}
       aria-live="polite"
     >
       <div className="profile-live-console-top">
         <span className="profile-live-orb" aria-hidden="true" />
         <div>
-          <strong>{receivedUpdate ? "New watch update" : statusText}</strong>
-          <small>{isPending ? "Checking for new watch data" : "Live watch data is on"}</small>
+          <strong>{statusText}</strong>
+          <small>Live watch data is on</small>
         </div>
       </div>
       <div className="profile-live-console-meter" aria-hidden="true">

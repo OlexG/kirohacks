@@ -5979,7 +5979,6 @@ button.care-sidebar-link {
   min-inline-size: 25ch;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-transform: capitalize;
   white-space: nowrap;
 }
 
@@ -6005,7 +6004,27 @@ button.care-sidebar-link {
   box-shadow: 0 0 0 5px rgba(79, 127, 99, 0.12);
   flex: 0 0 auto;
   height: 10px;
+  position: relative;
   width: 10px;
+}
+
+.profile-live-orb::after {
+  border: 1px solid rgba(79, 127, 99, 0.42);
+  border-radius: 999px;
+  content: "";
+  inset: -7px;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  transform: scale(0.72);
+}
+
+.profile-live-console.pulse .profile-live-orb::after {
+  animation: profile-live-ring 1100ms ease-out;
+}
+
+.profile-live-console.updated .profile-live-orb::after {
+  animation: profile-live-ring-strong 1400ms ease-out;
 }
 
 .profile-live-console.refreshing .profile-live-orb {
@@ -8859,6 +8878,36 @@ button.care-sidebar-link {
   }
 }
 
+@keyframes profile-live-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  18% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+@keyframes profile-live-ring-strong {
+  0% {
+    border-color: rgba(79, 127, 99, 0.52);
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  16% {
+    opacity: 0.86;
+  }
+  100% {
+    border-color: rgba(79, 127, 99, 0);
+    opacity: 0;
+    transform: scale(2.12);
+  }
+}
+
 @keyframes live-metric-rise {
   0% {
     filter: brightness(1);
@@ -8868,6 +8917,19 @@ button.care-sidebar-link {
   }
   100% {
     filter: brightness(1);
+  }
+}
+
+@keyframes live-field-idle-pulse {
+  0%, 100% {
+    border-color: rgba(216, 204, 186, 0.88);
+    box-shadow: none;
+  }
+  46% {
+    border-color: rgba(79, 127, 99, 0.26);
+    box-shadow:
+      inset 0 0 0 1px rgba(79, 127, 99, 0.08),
+      0 0 0 3px rgba(79, 127, 99, 0.035);
   }
 }
 
@@ -10514,6 +10576,36 @@ button.care-sidebar-link {
   color: #315f43;
 }
 
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-focus-metrics div:has(.live-metric-value),
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-profile-data-grid div:has(.live-metric-value),
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-orbit-card:has(.live-metric-value) {
+  animation: live-field-idle-pulse 6.4s ease-in-out infinite;
+}
+
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-focus-metrics div:nth-child(2):has(.live-metric-value),
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-profile-data-grid div:nth-child(2):has(.live-metric-value),
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-orbit-card:nth-of-type(2):has(.live-metric-value) {
+  animation-delay: -1.4s;
+}
+
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-profile-data-grid div:nth-child(3):has(.live-metric-value),
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-orbit-card:nth-of-type(3):has(.live-metric-value) {
+  animation-delay: -2.8s;
+}
+
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-profile-data-grid div:nth-child(4):has(.live-metric-value),
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-orbit-card:nth-of-type(4):has(.live-metric-value) {
+  animation-delay: -4.2s;
+}
+
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-profile-data-grid div:nth-child(5):has(.live-metric-value) {
+  animation-delay: -5.1s;
+}
+
+body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-profile-data-grid div:nth-child(6):has(.live-metric-value) {
+  animation-delay: -5.8s;
+}
+
 body[data-profile-live-state="updated"] .person-focus-content {
   animation: profile-card-confirm 1500ms ease;
   border-color: rgba(79, 127, 99, 0.36);
@@ -10546,8 +10638,13 @@ body[data-profile-live-state="updated"] .person-mini-chart svg path:last-child {
 
 @media (prefers-reduced-motion: reduce) {
   .profile-live-orb,
+  .profile-live-console.pulse .profile-live-orb::after,
   .profile-live-console.updated::before,
+  .profile-live-console.updated .profile-live-orb::after,
   .live-metric-value.is-updated,
+  body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-focus-metrics div:has(.live-metric-value),
+  body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-profile-data-grid div:has(.live-metric-value),
+  body:not([data-profile-refresh-state="refreshing"]):not([data-profile-live-state="updated"]) .person-orbit-card:has(.live-metric-value),
   body[data-profile-live-state="updated"] .person-focus-content,
   body[data-profile-live-state="updated"] .person-focus-content::after,
   body[data-profile-live-state="updated"] .person-orbit-card,
