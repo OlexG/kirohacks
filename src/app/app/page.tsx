@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Safely App | Care Roster",
+  title: "Safely App | Roster",
   description: "Manage seniors, watch signals, and caretaker alerts.",
 };
 
@@ -19,7 +19,6 @@ type Person = {
 };
 
 const groups: Array<{
-  range: string;
   title: string;
   summary: string;
   tone: "blue" | "green" | "amber" | "red";
@@ -27,7 +26,6 @@ const groups: Array<{
   footer?: string;
 }> = [
   {
-    range: "Independent living",
     title: "Stable",
     summary: "4/5 monitored",
     tone: "green",
@@ -80,7 +78,6 @@ const groups: Array<{
     footer: "1 quiet check-in pending",
   },
   {
-    range: "Needs review",
     title: "Watch List",
     summary: "4/5 reviewed",
     tone: "blue",
@@ -133,7 +130,6 @@ const groups: Array<{
     footer: "2 custom rules active",
   },
   {
-    range: "High attention",
     title: "Active Alerts",
     summary: "3/4 acknowledged",
     tone: "amber",
@@ -186,7 +182,6 @@ const groups: Array<{
     footer: "1 alert waiting on response",
   },
   {
-    range: "Device follow-up",
     title: "Offline",
     summary: "3/5 connected",
     tone: "red",
@@ -240,38 +235,14 @@ const groups: Array<{
   },
 ];
 
-function EyeIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24">
-      <path
-        d="M12 5.5c5.1 0 8.7 4.4 9.7 5.9.2.4.2.8 0 1.2-1 1.5-4.6 5.9-9.7 5.9s-8.7-4.4-9.7-5.9a1.1 1.1 0 0 1 0-1.2c1-1.5 4.6-5.9 9.7-5.9Zm0 2.8a3.7 3.7 0 1 0 0 7.4 3.7 3.7 0 0 0 0-7.4Zm0 2a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function SparkIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24">
-      <path
-        d="M13.1 2 8.4 10h4L10.9 22l5.2-8.6h-4.4L13.1 2Zm-7 2.6 1.1 2.2 2.2 1.1-2.2 1.1-1.1 2.2L5 9 2.8 7.9 5 6.8l1.1-2.2Zm13.5 8.4.9 1.8 1.8.9-1.8.9-.9 1.8-.9-1.8-1.8-.9 1.8-.9.9-1.8Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24">
-      <path
-        d="M7 2h2v3h6V2h2v3h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3V2Zm13 8H4v9h16v-9ZM4 8h16V7H4v1Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
+const navItems = [
+  { label: "Dashboard", href: "/app" },
+  { label: "Roster", href: "/app", active: true },
+  { label: "Alerts", href: "/app" },
+  { label: "Rules", href: "/app" },
+  { label: "Care Teams", href: "/app" },
+  { label: "Reports", href: "/app" },
+];
 
 function PeopleIcon() {
   return (
@@ -310,89 +281,80 @@ function PersonCard({ person }: Readonly<{ person: Person }>) {
 export default function AppPage() {
   return (
     <main className="care-app-page">
-      <section className="care-board" aria-label="Senior care management board">
-        <header className="care-board-header">
-          <div>
-            <p>Safely</p>
-            <h1>Care Roster</h1>
-          </div>
-          <div className="care-actions" aria-label="Dashboard controls">
-            <button type="button" aria-label="View mode">
-              <EyeIcon />
-            </button>
-            <button type="button">
-              <SparkIcon />
-              Insights
-            </button>
-            <button type="button">
-              <CalendarIcon />
-              Today
-            </button>
-            <button type="button" className="care-add-button">
-              <PeopleIcon />
-              Add person
-            </button>
-          </div>
-        </header>
-
-        <div className="care-stats" aria-label="Overview stats">
-          <div>
-            <span>16</span>
-            <p>People managed</p>
-          </div>
-          <div>
-            <span>3</span>
-            <p>Active alerts</p>
-          </div>
-          <div>
-            <span>4</span>
-            <p>Custom rules</p>
-          </div>
-          <div>
-            <span>92%</span>
-            <p>Devices reporting</p>
-          </div>
-        </div>
-
-        <div className="care-columns" aria-label="People grouped by care status">
-          {groups.map((group) => (
-            <section className={`care-column ${group.tone}`} key={group.title}>
-              <div className="care-column-range">{group.range}</div>
-              <div className="care-column-body">
-                <div className="care-column-title">
-                  <h2>{group.title}</h2>
-                  <div>
-                    <PeopleIcon />
-                    <span>{group.summary}</span>
-                  </div>
-                </div>
-                <div className="care-person-list">
-                  {group.people.map((person) => (
-                    <PersonCard person={person} key={person.name} />
-                  ))}
-                </div>
-                {group.footer ? <div className="care-column-footer">{group.footer}</div> : null}
-              </div>
-            </section>
-          ))}
-        </div>
-
-        <footer className="care-board-footer">
-          <Link href="/" aria-label="Back to landing page">
-            <span>Back to overview</span>
+      <div className="care-app-shell">
+        <aside className="care-sidebar" aria-label="Application navigation">
+          <Link className="care-sidebar-brand" href="/">
+            <span>Sa</span>
+            <div>
+              <strong>Safely</strong>
+              <small>Care operations</small>
+            </div>
           </Link>
-          <div>
-            <span className="care-legend stable" />
-            Stable
-            <span className="care-legend warning" />
-            Review
-            <span className="care-legend urgent" />
-            Urgent
-            <span className="care-legend offline" />
-            Offline
+          <nav className="care-sidebar-nav" aria-label="Workspace pages">
+            {navItems.map((item) => (
+              <Link
+                aria-current={item.active ? "page" : undefined}
+                className={item.active ? "active" : undefined}
+                href={item.href}
+                key={item.label}
+              >
+                <span aria-hidden="true">{item.label.slice(0, 1)}</span>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="care-sidebar-status">
+            <span />
+            <div>
+              <strong>Live monitoring</strong>
+              <small>92% devices online</small>
+            </div>
           </div>
-        </footer>
-      </section>
+        </aside>
+
+        <section className="care-main" aria-label="Roster workspace">
+          <div className="care-board" aria-label="Senior care management board">
+            <header className="care-board-header">
+              <h1>Roster</h1>
+            </header>
+
+            <div className="care-columns" aria-label="People grouped by care status">
+              {groups.map((group) => (
+                <section className={`care-column ${group.tone}`} key={group.title}>
+                  <div className="care-column-body">
+                    <div className="care-column-title">
+                      <h2>{group.title}</h2>
+                      <div>
+                        <PeopleIcon />
+                        <span>{group.summary}</span>
+                      </div>
+                    </div>
+                    <div className="care-person-list">
+                      {group.people.map((person) => (
+                        <PersonCard person={person} key={person.name} />
+                      ))}
+                    </div>
+                    {group.footer ? <div className="care-column-footer">{group.footer}</div> : null}
+                  </div>
+                </section>
+              ))}
+            </div>
+
+            <footer className="care-board-footer">
+              <div>
+                <span className="care-legend stable" />
+                Stable
+                <span className="care-legend warning" />
+                Review
+                <span className="care-legend urgent" />
+                Urgent
+                <span className="care-legend offline" />
+                Offline
+              </div>
+            </footer>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
