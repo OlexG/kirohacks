@@ -262,13 +262,8 @@ export default function Home() {
           <span>Safely</span>
         </a>
         <nav aria-label="Primary navigation">
-          <a href="#platform">Platform</a>
-          <a href="#alerts">Alerts</a>
-          <a href="#setup">Setup</a>
+          <a href="/app">Demo</a>
         </nav>
-        <a className="header-cta" href="#demo">
-          Get demo
-        </a>
       </header>
 
       <section id="top" className="hero-section">
@@ -280,11 +275,11 @@ export default function Home() {
             from one calm caretaker workspace.
           </p>
           <div className="hero-actions">
-            <a className="primary-button" href="#demo">
-              Request a demo
+            <a className="primary-button" href="/app">
+              Demo
             </a>
             <a className="secondary-button" href="#platform">
-              View platform
+              How it works
             </a>
           </div>
           <div className="trust-row" aria-label="Product highlights">
@@ -293,7 +288,7 @@ export default function Home() {
             <span>Care team handoff</span>
           </div>
         </div>
-        <div className="hero-visual" aria-label="Safety dashboard preview">
+        <div id="app" className="hero-visual" aria-label="Safety dashboard preview">
           <div className="floating-card left-note">
             <WatchIcon />
             <span>Watch online</span>
@@ -311,8 +306,8 @@ export default function Home() {
           <p className="eyebrow">Get to know Safely</p>
           <h2>One workspace for every care signal</h2>
           <p>
-            The page structure follows the reference image: big product screenshots, friendly
-            sections, simple language, and operational proof.
+            Give caretakers a focused view of Apple Watch events, senior status, and the alerts
+            that need a human response.
           </p>
         </div>
         <div className="feature-stack">
@@ -388,7 +383,7 @@ export default function Home() {
             the product shape is clear.
           </p>
         </div>
-        <a className="primary-button" href="mailto:care@safely.example">
+        <a className="primary-button" href="/app">
           Book demo
         </a>
       </section>
