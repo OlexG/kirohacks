@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 type Medication = { name: string; time: string };
 type MedWeek = Record<number, Medication[]>;
+type CareView = "roster" | "alerts" | "rules" | "teams" | "reports";
 
 type Person = {
   name: string;
@@ -45,6 +47,40 @@ const dayPatterns: number[][] = [
   [1, 2, 3, 4, 5],
   [0, 3, 6],
   [2, 4, 6],
+];
+
+const navItems = [
+  { label: "Roster", short: "R", view: "roster" },
+  { label: "Alerts", short: "A", view: "alerts" },
+  { label: "Rules", short: "R", view: "rules" },
+  { label: "Care Teams", short: "C", view: "teams" },
+  { label: "Reports", short: "R", view: "reports" },
+] satisfies Array<{ label: string; short: string; view: CareView }>;
+
+const careViews: Record<CareView, { eyebrow: string; title: string }> = {
+  roster: { eyebrow: "Care operations", title: "Roster" },
+  alerts: { eyebrow: "Response queue", title: "Alerts" },
+  rules: { eyebrow: "Automation", title: "Rules" },
+  teams: { eyebrow: "Coordination", title: "Care Teams" },
+  reports: { eyebrow: "Outcomes", title: "Reports" },
+};
+
+const ruleCards = [
+  ["Heart rate", "Notify if above 115 bpm for 5 minutes", "Arthur, David"],
+  ["Medication", "Escalate missed morning pills after 30 minutes", "Ethan, Eleanor"],
+  ["Connectivity", "Flag devices offline for more than 20 minutes", "Offline group"],
+];
+
+const teamCards = [
+  ["Family pod", "Mira, Jacob, Lena", "Primary coverage"],
+  ["Clinical review", "Nurse Avery, Dr. Chen", "Vitals and medication plans"],
+  ["Emergency contacts", "Local responders, building desk", "Escalation backup"],
+];
+
+const reportCards = [
+  ["92%", "Devices online", "Up 4% this week"],
+  ["14", "Medication check-ins", "3 need review"],
+  ["2m", "Median response", "Across urgent alerts"],
 ];
 
 const portraitPalettes = [
@@ -190,6 +226,55 @@ function PeopleIcon() {
         fill="currentColor"
       />
     </svg>
+  );
+}
+
+function CareSidebar({
+  activeView,
+  onViewChange,
+}: Readonly<{
+  activeView: CareView;
+  onViewChange: (view: CareView) => void;
+}>) {
+  return (
+    <aside className="care-sidebar" aria-label="Application navigation">
+      <Link className="care-sidebar-brand" href="/" aria-label="Safely home">
+        <span className="care-sidebar-mark">
+          <HeartGlyph />
+        </span>
+        <span>
+          <strong>Safely</strong>
+          <small>Care operations</small>
+        </span>
+      </Link>
+
+      <nav className="care-sidebar-nav" aria-label="Care workspace">
+        <Link className="care-sidebar-link" href="/">
+          <span>D</span>
+          Dashboard
+        </Link>
+        {navItems.map((item) => (
+          <button
+            type="button"
+            className={`care-sidebar-link${activeView === item.view ? " active" : ""}`}
+            key={item.label}
+            aria-current={activeView === item.view ? "page" : undefined}
+            onClick={() => onViewChange(item.view)}
+          >
+            <span>{item.short}</span>
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="care-sidebar-status" aria-label="Live monitoring status">
+        <div>
+          <span aria-hidden="true" />
+          <strong>Live monitoring</strong>
+        </div>
+        <p>92% devices online</p>
+      </div>
+    </aside>
   );
 }
 
@@ -376,18 +461,120 @@ function MedicationModal({
   );
 }
 
+function AlertQueueView({ onSelectDay }: Readonly<{ onSelectDay: (person: Person, day: number) => void }>) {
+  const alertPeople = groups.flatMap((group) =>
+    group.people.filter((person) => person.alert === "urgent" || person.alert === "warning"),
+  );
+
+  return (
+    <div className="care-detail-grid">
+      {alertPeople.map((person) => (
+        <article className={`care-detail-card ${person.alert}`} key={person.name}>
+          <div className="care-detail-card-header">
+            <Image src={person.photo} alt={`${person.name} portrait`} width={48} height={48} unoptimized />
+            <div>
+              <h2>{person.name}</h2>
+              <p>Age {person.age} · {person.status}</p>
+            </div>
+          </div>
+          <div className="care-detail-metric">
+            <span>Current heart rate</span>
+            <strong>{person.bpm} bpm</strong>
+          </div>
+          <button type="button" className="care-detail-action" onClick={() => onSelectDay(person, 0)}>
+            Review medication
+          </button>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function SimpleCardView({
+  type,
+}: Readonly<{
+  type: Exclude<CareView, "roster" | "alerts">;
+}>) {
+  const cards = type === "rules" ? ruleCards : type === "teams" ? teamCards : reportCards;
+
+  return (
+    <div className={`care-detail-grid ${type}`}>
+      {cards.map(([title, body, meta]) => (
+        <article className="care-detail-card" key={title}>
+          <div className="care-detail-kicker">{type}</div>
+          <h2>{title}</h2>
+          <p>{body}</p>
+          <div className="care-detail-meta">{meta}</div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function RosterColumns({ onSelectDay }: Readonly<{ onSelectDay: (person: Person, day: number) => void }>) {
+  return (
+    <div className="care-columns" aria-label="People grouped by care status">
+      {groups.map((group) => (
+        <section className={`care-column ${group.tone}`} key={group.title}>
+          <div className="care-column-body">
+            <div className="care-column-title">
+              <h2>{group.title}</h2>
+              <div>
+                <PeopleIcon />
+                <span>{group.summary}</span>
+              </div>
+            </div>
+            <div className="care-person-list">
+              {group.people.map((person) => (
+                <PersonCard
+                  person={person}
+                  key={person.name}
+                  onSelectDay={(p, d) => onSelectDay(p, d)}
+                />
+              ))}
+            </div>
+            {group.footer ? <div className="care-column-footer">{group.footer}</div> : null}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function CareWorkspace({
+  activeView,
+  onSelectDay,
+}: Readonly<{ activeView: CareView; onSelectDay: (person: Person, day: number) => void }>) {
+  if (activeView === "roster") {
+    return <RosterColumns onSelectDay={onSelectDay} />;
+  }
+
+  return (
+    <section className="care-detail-view" aria-label={`${careViews[activeView].title} workspace`}>
+      {activeView === "alerts" ? (
+        <AlertQueueView onSelectDay={onSelectDay} />
+      ) : (
+        <SimpleCardView type={activeView} />
+      )}
+    </section>
+  );
+}
+
 export default function AppPage() {
   const [selected, setSelected] = useState<{ person: Person; day: number } | null>(null);
+  const [activeView, setActiveView] = useState<CareView>("roster");
+  const view = careViews[activeView];
 
   return (
     <main className="care-app-page">
       <div className="care-app-shell">
+        <CareSidebar activeView={activeView} onViewChange={setActiveView} />
         <section className="care-main" aria-label="Roster workspace">
           <div className="care-board" aria-label="Senior care management board">
             <header className="care-board-header">
               <div>
-                <p className="care-board-eyebrow">Care operations</p>
-                <h1>Roster</h1>
+                <p className="care-board-eyebrow">{view.eyebrow}</p>
+                <h1>{view.title}</h1>
               </div>
               <div className="care-board-status" aria-label="Live monitoring">
                 <span aria-hidden="true" />
@@ -398,33 +585,10 @@ export default function AppPage() {
               </div>
             </header>
 
-            <div className="care-columns" aria-label="People grouped by care status">
-              {groups.map((group) => (
-                <section className={`care-column ${group.tone}`} key={group.title}>
-                  <div className="care-column-body">
-                    <div className="care-column-title">
-                      <h2>{group.title}</h2>
-                      <div>
-                        <PeopleIcon />
-                        <span>{group.summary}</span>
-                      </div>
-                    </div>
-                    <div className="care-person-list">
-                      {group.people.map((person) => (
-                        <PersonCard
-                          person={person}
-                          key={person.name}
-                          onSelectDay={(p, d) => setSelected({ person: p, day: d })}
-                        />
-                      ))}
-                    </div>
-                    {group.footer ? (
-                      <div className="care-column-footer">{group.footer}</div>
-                    ) : null}
-                  </div>
-                </section>
-              ))}
-            </div>
+            <CareWorkspace
+              activeView={activeView}
+              onSelectDay={(person, day) => setSelected({ person, day })}
+            />
 
             <footer className="care-board-footer">
               <div>

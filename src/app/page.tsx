@@ -5,7 +5,7 @@ const seniors = [
     status: "Stable",
     detail: "Last seen 2 min ago",
     heartRate: "72 bpm",
-    color: "bg-emerald-500",
+    color: "status-stable",
   },
   {
     name: "Arthur",
@@ -13,7 +13,7 @@ const seniors = [
     status: "Warning",
     detail: "Heart rate elevated",
     heartRate: "118 bpm",
-    color: "bg-amber-400",
+    color: "status-review",
   },
   {
     name: "Mae",
@@ -21,7 +21,7 @@ const seniors = [
     status: "Urgent",
     detail: "Fall detected",
     heartRate: "96 bpm",
-    color: "bg-red-500",
+    color: "status-urgent",
   },
   {
     name: "Sam",
@@ -29,7 +29,7 @@ const seniors = [
     status: "Offline",
     detail: "Watch disconnected",
     heartRate: "--",
-    color: "bg-slate-400",
+    color: "status-offline",
   },
 ];
 
@@ -38,7 +38,7 @@ const features = [
     label: "Fall detection",
     title: "Know the moment someone needs help",
     body: "Apple Watch fall events surface immediately in the care dashboard, with severity, location context, and acknowledgement status.",
-    accent: "bg-red-50 text-red-700 border-red-100",
+    accent: "tone-ink",
     metric: "12 sec",
     metricLabel: "median alert time",
   },
@@ -46,7 +46,7 @@ const features = [
     label: "Vitals monitoring",
     title: "Spot concerning health changes sooner",
     body: "Heart rate, movement, and watch connectivity are summarized into simple safety states for every senior in your care.",
-    accent: "bg-blue-50 text-blue-700 border-blue-100",
+    accent: "tone-sand",
     metric: "24/7",
     metricLabel: "watch signal review",
   },
@@ -54,7 +54,7 @@ const features = [
     label: "Custom rules",
     title: "Tune alerts around each person",
     body: "Create thresholds for heart rate, inactivity, night hours, offline devices, and escalation paths for different caretakers.",
-    accent: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    accent: "tone-stone",
     metric: "4",
     metricLabel: "alert levels",
   },
@@ -253,7 +253,7 @@ function MiniProductPanel({
 
 export default function Home() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f8f5ee] text-slate-950">
+    <main className="home-page min-h-screen overflow-hidden">
       <header className="site-header">
         <a className="brand" href="#top" aria-label="Home">
           <span className="brand-mark">
