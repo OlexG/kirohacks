@@ -8,6 +8,7 @@ import type { CarePeopleGroup, CarePerson } from "@/lib/care-people";
 import { resolvePersonPhoto } from "@/lib/care-person-image";
 import type { CareProfile } from "@/lib/profiles";
 import { AppSidebar } from "./sidebar";
+import { AlertRoom, type RoomAlert, type RoomPerson } from "./alert-room";
 import {
   updateProfileNotificationNumberAction,
   type ProfileNumberActionState,
@@ -778,9 +779,51 @@ function CareWorkspace({
     return <RosterColumns groups={groups} />;
   }
 
+  const roomAlerts: RoomAlert[] = alerts.map((a) => ({
+    id: a.id,
+    alert_key: a.alert_key,
+    person_id: a.person_id,
+    title: a.title,
+    signal_label: a.signal_label,
+    severity: a.severity,
+    status: a.status,
+    summary: a.summary,
+    metric_label: a.metric_label,
+    metric_value: a.metric_value,
+    triggered_label: a.triggered_label,
+    next_step: a.next_step,
+    created_at: a.created_at,
+    person: {
+      id: a.person.id,
+      name: a.person.name,
+      age: a.person.age,
+      status: a.person.status ?? "",
+      alert: a.person.alert,
+      photo: a.person.photo,
+      hasPhoto: a.person.hasPhoto,
+      initials: a.person.initials,
+      heart_rate_bpm: a.person.heart_rate_bpm,
+      watch_battery_percent: a.person.watch_battery_percent,
+    },
+  }));
+  const roomPeople: RoomPerson[] = groups.flatMap((group) =>
+    group.people.map((person) => ({
+      id: person.id,
+      name: person.name,
+      age: person.age,
+      status: person.status ?? "",
+      alert: person.alert,
+      photo: person.photo,
+      hasPhoto: person.hasPhoto,
+      initials: person.initials,
+      heart_rate_bpm: person.heart_rate_bpm,
+      watch_battery_percent: person.watch_battery_percent,
+    })),
+  );
+
   return (
-    <section className="care-detail-view" aria-label={`${careViews[activeView].title} workspace`}>
-      <AlertQueueView alerts={alerts} profile={profile} />
+    <section className="care-detail-view room-view" aria-label={`${careViews[activeView].title} workspace`}>
+      <AlertRoom alerts={roomAlerts} people={roomPeople} profile={profile} />
     </section>
   );
 }
