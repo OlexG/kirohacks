@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo } from "react";
+import { useActionState, useMemo, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { CareAlert, CareAlertSeverity } from "@/lib/care-alerts";
@@ -169,39 +169,222 @@ function PeopleIcon() {
   );
 }
 
-function DashboardStat({
-  label,
-  value,
-  note,
-}: Readonly<{ label: string; value: string | number; note: string }>) {
-  return (
-    <article className="care-dashboard-stat">
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <p>{note}</p>
-    </article>
-  );
-}
-
 function AlertBadge({ alert }: Readonly<{ alert: CarePerson["alert"] }>) {
   return <span className={`care-alert-badge ${alert}`}>{alertLabels[alert]}</span>;
 }
 
+const statusChartConfig = [
+  { key: "stable", label: "Stable", color: "#4f7f63" },
+  { key: "warning", label: "Review", color: "#c4812b" },
+  { key: "urgent", label: "Urgent", color: "#c54a3f" },
+  { key: "offline", label: "Offline", color: "#7f8790" },
+] satisfies Array<{ key: CarePerson["alert"]; label: string; color: string }>;
+
+function getPercent(value: number, total: number) {
+  return total === 0 ? 0 : Math.round((value / total) * 100);
+}
+
+function StatusDonut({ people }: Readonly<{ people: RosterPerson[] }>) {
+  const total = people.length;
+  const stops = statusChartConfig.reduce<
+    Array<(typeof statusChartConfig)[number] & { count: number; start: number; end: number }>
+  >((items, item) => {
+    const count = people.filter((person) => person.alert === item.key).length;
+    const start = items.at(-1)?.end ?? 0;
+    const end = total === 0 ? start : start + (count / total) * 360;
+    return [...items, { ...item, count, start, end }];
+  }, []);
+  const donutBackground =
+    total === 0
+      ? "#ece2d3"
+      : `conic-gradient(${stops
+          .map((item) => `${item.color} ${item.start.toFixed(1)}deg ${item.end.toFixed(1)}deg`)
+          .join(", ")})`;
+  const clearCount = people.filter((person) => person.alert === "stable").length;
+
+  return (
+    <article className="dashboard-chart-panel status-mix" aria-label="Roster status mix">
+      <div className="care-dashboard-heading">
+        <p>Status mix</p>
+        <h2>Roster health</h2>
+      </div>
+      <div className="dashboard-donut-wrap">
+        <div
+          aria-label={`${getPercent(clearCount, total)} percent stable`}
+          className="dashboard-donut"
+          role="img"
+          style={{ background: donutBackground }}
+        >
+          <strong>{getPercent(clearCount, total)}%</strong>
+          <span>stable</span>
+        </div>
+        <div className="dashboard-chart-legend">
+          {stops.map((item) => (
+            <span key={item.key}>
+              <i style={{ backgroundColor: item.color }} />
+              {item.label}
+              <strong>{item.count}</strong>
+            </span>
+          ))}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function BatteryBars({ people }: Readonly<{ people: RosterPerson[] }>) {
+  const buckets = [
+    {
+      key: "strong",
+      label: "70-100",
+      count: people.filter((person) => (person.watch_battery_percent ?? -1) >= 70).length,
+    },
+    {
+      key: "steady",
+      label: "40-69",
+      count: people.filter((person) => {
+        const battery = person.watch_battery_percent;
+        return battery !== null && battery >= 40 && battery < 70;
+      }).length,
+    },
+    {
+      key: "low",
+      label: "0-39",
+      count: people.filter((person) => {
+        const battery = person.watch_battery_percent;
+        return battery !== null && battery < 40;
+      }).length,
+    },
+    {
+      key: "offline",
+      label: "Offline",
+      count: people.filter((person) => person.watch_battery_percent === null).length,
+    },
+  ];
+  const maxCount = Math.max(1, ...buckets.map((bucket) => bucket.count));
+
+  return (
+    <article className="dashboard-chart-panel battery-chart" aria-label="Watch battery distribution">
+      <div className="care-dashboard-heading">
+        <p>Device readiness</p>
+        <h2>Watch batteries</h2>
+      </div>
+      <div className="battery-bars">
+        {buckets.map((bucket) => (
+          <div className={`battery-bar ${bucket.key}`} key={bucket.key}>
+            <div className="battery-bar-track">
+              <span
+                style={
+                  {
+                    "--bar-height": `${Math.max(12, Math.round((bucket.count / maxCount) * 100))}%`,
+                  } as CSSProperties
+                }
+              />
+            </div>
+            <strong>{bucket.count}</strong>
+            <small>{bucket.label}</small>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function AlertTrend({ alerts }: Readonly<{ alerts: RosterAlert[] }>) {
+  const latestAlertTime = alerts.reduce((latest, alert) => {
+    const createdAt = new Date(alert.created_at).getTime();
+    return Number.isNaN(createdAt) ? latest : Math.max(latest, createdAt);
+  }, 0);
+  const dayKeys = Array.from({ length: 7 }, (_, index) => {
+    const date = latestAlertTime === 0 ? new Date(0) : new Date(latestAlertTime);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (6 - index));
+    return date.toISOString().slice(0, 10);
+  });
+  const alertCounts = new Map(dayKeys.map((day) => [day, 0]));
+
+  alerts.forEach((alert) => {
+    const day = new Date(alert.created_at).toISOString().slice(0, 10);
+    if (alertCounts.has(day)) {
+      alertCounts.set(day, (alertCounts.get(day) ?? 0) + 1);
+    }
+  });
+
+  const samples = dayKeys.map((day) => alertCounts.get(day) ?? 0);
+  const max = Math.max(1, ...samples);
+  const points = samples
+    .map((sample, index) => {
+      const x = 8 + index * 14;
+      const y = 82 - (sample / max) * 58;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <article className="dashboard-chart-panel alert-trend" aria-label="Seven day alert count trend">
+      <div className="care-dashboard-heading">
+        <p>Alerts</p>
+        <h2>Alert trend</h2>
+      </div>
+      <div className="alert-trend-body">
+        <div>
+          <strong>{alerts.length}</strong>
+          <span>open now</span>
+        </div>
+        <svg viewBox="0 0 100 92" role="img" aria-label="Seven day alert count trend">
+          <path d="M8 82H94" />
+          <path d="M8 58H94" />
+          <path d="M8 34H94" />
+          <polyline points={points} />
+          {samples.map((sample, index) => {
+            const x = 8 + index * 14;
+            const y = 82 - (sample / max) * 58;
+            return <circle cx={x} cy={y} key={`${sample}-${index}`} r="2.2" />;
+          })}
+        </svg>
+      </div>
+    </article>
+  );
+}
+
+const alertSeverityLabels: Record<CareAlertSeverity, string> = {
+  info: "Info",
+  warning: "Review",
+  urgent: "Urgent",
+};
+
+const alertSignalGroups = [
+  { match: "fall", label: "Fall" },
+  { match: "heart", label: "Heart" },
+  { match: "oxygen", label: "Oxygen" },
+  { match: "movement", label: "Movement" },
+  { match: "inactive", label: "Movement" },
+  { match: "offline", label: "Device" },
+  { match: "battery", label: "Device" },
+  { match: "sleep", label: "Sleep" },
+  { match: "medication", label: "Medication" },
+  { match: "check", label: "Check-in" },
+  { match: "location", label: "Location" },
+] satisfies Array<{ match: string; label: string }>;
+
+function getAlertSignalGroup(alert: CareAlert) {
+  const signal = `${alert.alert_key} ${alert.signal_label} ${alert.title}`.toLowerCase();
+  return alertSignalGroups.find((group) => signal.includes(group.match))?.label ?? "Custom";
+}
+
+function getAlertCount(alerts: RosterAlert[], severity: CareAlertSeverity) {
+  return alerts.filter((alert) => alert.severity === severity).length;
+}
+
 function DashboardOverview({ alerts, groups }: Readonly<{ alerts: RosterAlert[]; groups: RosterGroup[] }>) {
   const people = groups.flatMap((group) => group.people);
-  const urgentCount = alerts.filter((alert) => alert.severity === "urgent").length;
-  const onlineCount = people.filter((person) => person.alert !== "offline").length;
-  const offlineCount = people.length - onlineCount;
-  const onlinePercent =
-    people.length === 0 ? 0 : Math.round((onlineCount / people.length) * 100);
 
   return (
     <section className="care-dashboard-view" aria-label="Dashboard overview">
-      <div className="care-dashboard-stats" aria-label="Operational summary">
-        <DashboardStat label="Seniors" value={people.length} note={`${onlineCount} reporting now`} />
-        <DashboardStat label="Alerts" value={alerts.length} note={`${urgentCount} urgent`} />
-        <DashboardStat label="Devices online" value={`${onlinePercent}%`} note="watch connectivity" />
-        <DashboardStat label="Offline" value={offlineCount} note="need setup help" />
+      <div className="dashboard-charts-grid" aria-label="Quick care overview charts">
+        <StatusDonut people={people} />
+        <BatteryBars people={people} />
+        <AlertTrend alerts={alerts} />
       </div>
 
       <div className="care-dashboard-grid">
@@ -338,24 +521,45 @@ function AlertQueueView({
   alerts: RosterAlert[];
   profile: CareProfile | null;
 }>) {
+  const [selectedAlertId, setSelectedAlertId] = useState(alerts[0]?.id ?? "");
   const [state, formAction, isPending] = useActionState(
     updateProfileNotificationNumberAction,
     initialProfileNumberState,
   );
   const alertCountLabel = alerts.length === 1 ? "1 open alert" : `${alerts.length} open alerts`;
+  const selectedAlert = alerts.find((alert) => alert.id === selectedAlertId) ?? alerts[0] ?? null;
+  const routeLabel = profile?.notification_number ? `Routing to ${profile.notification_number}` : "No routing number";
+  const routeTarget = profile?.notification_number ?? "no notification number";
+  const severitySummary = [
+    { key: "urgent", label: "Urgent", value: getAlertCount(alerts, "urgent") },
+    { key: "warning", label: "Review", value: getAlertCount(alerts, "warning") },
+    { key: "info", label: "Info", value: getAlertCount(alerts, "info") },
+  ] satisfies Array<{ key: CareAlertSeverity; label: string; value: number }>;
 
   return (
     <div className="alerts-workspace">
-      <section className="profile-number-panel" aria-label="Notification profile">
-        <div className="profile-number-copy">
-          <p className="care-detail-kicker">Demo profile</p>
-          <h2>{profile?.display_name ?? "Demo Caregiver"}</h2>
-          <p>Add your number for notifications from the alert queue.</p>
+      <section className="alerts-command-bar" aria-label="Alert command center">
+        <div className="alerts-command-copy">
+          <p className="care-detail-kicker">Live queue</p>
+          <h2>Everything that needs a response</h2>
         </div>
 
-        <form action={formAction} className="profile-number-form">
+        <div className="alerts-summary-strip" aria-label="Open alerts by severity">
+          {severitySummary.map((item) => (
+            <span className={item.key} key={item.key}>
+              <strong>{item.value}</strong>
+              {item.label}
+            </span>
+          ))}
+          <span>
+            <strong>{alerts.length}</strong>
+            Total
+          </span>
+        </div>
+
+        <form action={formAction} className="profile-number-form alerts-route-form">
           <label>
-            Number
+            Notify
             <input
               autoComplete="tel"
               defaultValue={profile?.notification_number ?? ""}
@@ -366,92 +570,165 @@ function AlertQueueView({
             />
           </label>
           <button className="care-detail-action" disabled={isPending} type="submit">
-            {isPending ? "Saving" : "Save number"}
+            {isPending ? "Saving" : "Save"}
           </button>
           <p className={state.message ? (state.ok ? "success" : "error") : undefined}>
-            {state.message ||
-              (profile?.notification_number
-                ? `Current number: ${profile.notification_number}`
-                : "No notification number saved yet.")}
+            {state.message || routeLabel}
           </p>
         </form>
       </section>
 
-      <section className="care-alert-table-panel" aria-label="Active alert table">
-        <header className="care-alert-table-header">
-          <div>
-            <p className="care-detail-kicker">Alert table</p>
-            <h2>Active alerts</h2>
-          </div>
-          <span>{alertCountLabel}</span>
-        </header>
-
-        {alerts.length === 0 ? (
-          <article className="care-detail-card">
+      <section className="alerts-one-page" aria-label="Active alert response workspace">
+        <div className="care-alert-table-panel alerts-queue-panel">
+          <header className="care-alert-table-header">
             <div>
-              <h2>No active alerts</h2>
-              <p>New urgent and review alerts will appear here.</p>
+              <p className="care-detail-kicker">Inbox</p>
+              <h2>Active alerts</h2>
             </div>
-          </article>
-        ) : (
-          <div className="care-alert-table-scroll">
-            <table className="care-alert-table">
-              <thead>
-                <tr>
-                  <th scope="col">Person</th>
-                  <th scope="col">Alert</th>
-                  <th scope="col">Signal</th>
-                  <th scope="col">Metric</th>
-                  <th scope="col">Triggered</th>
-                  <th scope="col">Next step</th>
-                  <th scope="col">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {alerts.map((alert) => (
-                  <tr className={alert.severity} key={alert.id}>
-                    <td>
-                      <div className="care-alert-person">
-                        <Image
-                          src={alert.person.photo}
-                          alt={`${alert.person.name} portrait`}
-                          width={38}
-                          height={38}
-                          unoptimized={!alert.person.hasPhoto}
-                        />
-                        <div>
-                          <Link className="care-dashboard-person-link" href={`/app/people/${alert.person.id}`}>
-                            {alert.person.name}
-                          </Link>
-                          <span>Age {alert.person.age}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="care-alert-title">
-                        <span>{alert.severity}</span>
+            <span>{alertCountLabel}</span>
+          </header>
+
+          {alerts.length === 0 ? (
+            <article className="care-detail-card alerts-empty-card">
+              <div>
+                <h2>No active alerts</h2>
+                <p>New urgent, review, device, medication, and custom-rule alerts will appear here.</p>
+              </div>
+            </article>
+          ) : (
+            <div className="alerts-list" role="list">
+              {alerts.map((alert) => {
+                const isSelected = selectedAlert?.id === alert.id;
+
+                return (
+                  <button
+                    aria-pressed={isSelected}
+                    className={`alerts-list-row ${alert.severity}${isSelected ? " selected" : ""}`}
+                    key={alert.id}
+                    onClick={() => setSelectedAlertId(alert.id)}
+                    type="button"
+                  >
+                    <span className="alerts-row-person">
+                      <Image
+                        src={alert.person.photo}
+                        alt={`${alert.person.name} portrait`}
+                        width={34}
+                        height={34}
+                        unoptimized={!alert.person.hasPhoto}
+                      />
+                      <span>
+                        <strong>{alert.person.name}</strong>
+                        <small>{getAlertSignalGroup(alert)}</small>
+                      </span>
+                    </span>
+                    <span className="alerts-row-main">
+                      <span>
+                        <i>{alertSeverityLabels[alert.severity]}</i>
                         <strong>{alert.title}</strong>
-                        <small>{alert.summary}</small>
-                      </div>
-                    </td>
-                    <td>{alert.signal_label}</td>
-                    <td>
-                      <span className="care-alert-metric-label">{alert.metric_label}</span>
-                      <strong className="care-alert-metric-value">{alert.metric_value}</strong>
-                    </td>
-                    <td>{alert.triggered_label}</td>
-                    <td>{alert.next_step}</td>
-                    <td>
-                      <Link className="care-detail-action" href={`/app/people/${alert.person.id}`}>
-                        Review
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                      </span>
+                      <small>{alert.summary}</small>
+                    </span>
+                    <span className="alerts-row-metric">
+                      <small>{alert.metric_label}</small>
+                      <strong>{alert.metric_value}</strong>
+                    </span>
+                    <span className="alerts-row-time">{alert.triggered_label}</span>
+                    <span className="alerts-row-next">{alert.next_step}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <aside className="alerts-detail-panel" aria-label="Selected alert details">
+          {selectedAlert ? (
+            <>
+              <header className={`alerts-detail-header ${selectedAlert.severity}`}>
+                <span>{alertSeverityLabels[selectedAlert.severity]}</span>
+                <h2>{selectedAlert.title}</h2>
+                <p>
+                  {selectedAlert.person.name} - {getAlertSignalGroup(selectedAlert)} - {selectedAlert.triggered_label}
+                </p>
+              </header>
+
+              <div className="alerts-detail-person">
+                <Image
+                  src={selectedAlert.person.photo}
+                  alt={`${selectedAlert.person.name} portrait`}
+                  width={46}
+                  height={46}
+                  unoptimized={!selectedAlert.person.hasPhoto}
+                />
+                <div>
+                  <Link className="care-dashboard-person-link" href={`/app/people/${selectedAlert.person.id}`}>
+                    {selectedAlert.person.name}
+                  </Link>
+                  <span>
+                    Age {selectedAlert.person.age} - {selectedAlert.person.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="alerts-detail-summary">
+                <p>{selectedAlert.summary}</p>
+              </div>
+
+              <dl className="alerts-detail-grid">
+                <div>
+                  <dt>Signal</dt>
+                  <dd>{selectedAlert.signal_label}</dd>
+                </div>
+                <div>
+                  <dt>{selectedAlert.metric_label}</dt>
+                  <dd>{selectedAlert.metric_value}</dd>
+                </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd>{selectedAlert.status}</dd>
+                </div>
+                <div>
+                  <dt>Opened</dt>
+                  <dd>{selectedAlert.triggered_label}</dd>
+                </div>
+              </dl>
+
+              <section className="alerts-next-step" aria-label="Suggested next step">
+                <p className="care-detail-kicker">Next step</p>
+                <strong>{selectedAlert.next_step}</strong>
+              </section>
+
+              <section className="alerts-timeline" aria-label="Alert timeline">
+                <span>
+                  <i />
+                  Triggered by {selectedAlert.signal_label}
+                </span>
+                <span>
+                  <i />
+                  Routed to {routeTarget}
+                </span>
+                <span>
+                  <i />
+                  Waiting for caregiver acknowledgement
+                </span>
+              </section>
+
+              <div className="alerts-detail-actions" aria-label="Alert actions">
+                <button type="button">Call</button>
+                <button type="button">Message</button>
+                <button type="button">Snooze</button>
+                <Link className="care-detail-action" href={`/app/people/${selectedAlert.person.id}`}>
+                  Review
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div className="alerts-detail-empty">
+              <h2>No alert selected</h2>
+              <p>Active alerts will open here for quick triage.</p>
+            </div>
+          )}
+        </aside>
       </section>
     </div>
   );
