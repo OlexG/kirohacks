@@ -20,6 +20,25 @@ export type CarePerson = {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  sex: "female" | "male" | "other" | "unknown" | null;
+  height_cm: number | null;
+  assistive_device: "none" | "cane" | "walker" | "wheelchair" | "unknown" | null;
+  impairment_tags: string[] | null;
+  prior_falls_12mo: number | null;
+  injurious_fall_12mo: boolean | null;
+  unable_to_rise_after_fall_12mo: boolean | null;
+  fall_rule_risk_score_100: number | null;
+  fall_rule_instability_score_100: number | null;
+  fall_rule_risk_level: "low" | "moderate" | "high" | null;
+  fall_ml_risk_score_01: number | null;
+  fall_ml_model_version: string | null;
+  fall_risk_updated_at: string | null;
+  walking_steadiness_class: "ok" | "low" | "very_low" | "unknown" | null;
+  walking_steadiness_score_01: number | null;
+  walking_speed_mps: number | null;
+  walking_step_length_m: number | null;
+  walking_asymmetry_pct: number | null;
+  walking_double_support_pct: number | null;
 };
 
 export type CarePeopleGroup = {
@@ -63,13 +82,14 @@ const groupConfig: Record<
   },
 };
 
+const carePersonSelect =
+  "id, name, age, care_group, status, heart_rate_bpm, last_seen_label, watch_battery_percent, initials, avatar, alert, context, active, sort_order, created_at, updated_at, sex, height_cm, assistive_device, impairment_tags, prior_falls_12mo, injurious_fall_12mo, unable_to_rise_after_fall_12mo, fall_rule_risk_score_100, fall_rule_instability_score_100, fall_rule_risk_level, fall_ml_risk_score_01, fall_ml_model_version, fall_risk_updated_at, walking_steadiness_class, walking_steadiness_score_01, walking_speed_mps, walking_step_length_m, walking_asymmetry_pct, walking_double_support_pct";
+
 export async function listCarePeople() {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("care_people")
-    .select(
-      "id, name, age, care_group, status, heart_rate_bpm, last_seen_label, watch_battery_percent, initials, avatar, alert, context, active, sort_order, created_at, updated_at",
-    )
+    .select(carePersonSelect)
     .eq("active", true)
     .order("sort_order", { ascending: true });
 
@@ -84,9 +104,7 @@ export async function getCarePerson(personId: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("care_people")
-    .select(
-      "id, name, age, care_group, status, heart_rate_bpm, last_seen_label, watch_battery_percent, initials, avatar, alert, context, active, sort_order, created_at, updated_at",
-    )
+    .select(carePersonSelect)
     .eq("id", personId)
     .eq("active", true)
     .maybeSingle();

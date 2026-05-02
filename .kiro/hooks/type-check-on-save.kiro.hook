@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Type Check on Save",
+  "description": "Runs tsc --noEmit after saving a TypeScript file to catch type errors immediately.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.ts",
+      "**/*.tsx"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "npx tsc --noEmit 2>&1 | head -30"
+  }
+}

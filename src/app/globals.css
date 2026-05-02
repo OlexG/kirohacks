@@ -5848,7 +5848,353 @@ button.care-sidebar-link {
   margin-top: 5px;
 }
 
+/* Profile room: spatial redesign to match the alert room. */
+.person-profile-board .person-profile-header {
+  display: none;
+}
+
+.person-room-view {
+  background:
+    linear-gradient(90deg, rgba(216, 204, 186, 0.2) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(216, 204, 186, 0.18) 1px, transparent 1px),
+    #f4efe7;
+  background-size: 44px 44px;
+  gap: 14px;
+  padding: 14px;
+}
+
+.person-room-topbar {
+  align-items: center;
+  background: rgba(255, 253, 248, 0.92);
+  border: 1px solid rgba(216, 204, 186, 0.8);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(33, 31, 27, 0.05);
+  display: flex;
+  flex: 0 0 auto;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 9px 10px;
+  position: relative;
+  z-index: 5;
+}
+
+.person-room-topbar .person-back-link {
+  color: var(--care-primary);
+  margin: 0;
+}
+
+.person-room-status {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.person-room-status span {
+  background: #f4eee5;
+  border: 1px solid #e6ded2;
+  border-radius: 999px;
+  color: var(--care-secondary);
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1;
+  padding: 8px 11px;
+  white-space: nowrap;
+}
+
+.person-room-stage {
+  align-items: stretch;
+  display: grid;
+  flex: 0 0 auto;
+  gap: 14px;
+  grid-template-areas:
+    "heart focus watch"
+    "motion focus rest";
+  grid-template-columns: minmax(190px, 0.74fr) minmax(420px, 1.55fr) minmax(190px, 0.74fr);
+  grid-template-rows: repeat(2, minmax(230px, 1fr));
+  min-height: clamp(490px, 56vh, 610px);
+  overflow: visible;
+  position: relative;
+}
+
+.person-focus-card {
+  --person-glow: rgba(21, 128, 61, 0.16);
+  display: flex;
+  grid-area: focus;
+  max-width: none;
+  position: relative;
+  width: 100%;
+  z-index: 4;
+}
+
+.person-focus-pulse {
+  animation: room-pulse 3.8s ease-in-out infinite;
+  border: 3px solid var(--person-glow);
+  border-radius: 18px;
+  inset: -10px;
+  pointer-events: none;
+  position: absolute;
+}
+
+.person-focus-content {
+  background: #fffdf8;
+  border: 1px solid var(--care-border);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(90, 86, 75, 0.04),
+    0 28px 70px rgba(33, 31, 27, 0.16),
+    0 4px 12px rgba(33, 31, 27, 0.08);
+  align-content: center;
+  display: grid;
+  height: 100%;
+  justify-items: center;
+  overflow: hidden;
+  padding: 32px 28px 28px;
+  position: relative;
+  text-align: center;
+  width: 100%;
+}
+
+.person-focus-photo {
+  aspect-ratio: 1;
+  border: 4px solid #fffdf8;
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(33, 31, 27, 0.18);
+  display: block;
+  object-fit: cover;
+}
+
+.person-focus-kicker,
+.person-focus-content h2,
+.person-focus-subtitle,
+.person-focus-summary {
+  margin: 0;
+}
+
+.person-focus-kicker {
+  color: var(--care-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  margin-top: 18px;
+  text-transform: uppercase;
+}
+
+.person-focus-content h2 {
+  color: var(--care-primary);
+  font-size: clamp(34px, 4.2vw, 52px);
+  font-weight: 820;
+  letter-spacing: 0;
+  line-height: 1.02;
+  margin-top: 7px;
+}
+
+.person-focus-subtitle {
+  color: var(--care-secondary);
+  font-size: 14px;
+  font-weight: 720;
+  margin-top: 9px;
+}
+
+.person-focus-summary {
+  color: var(--care-secondary);
+  font-size: 15px;
+  font-weight: 560;
+  line-height: 1.55;
+  margin-top: 18px;
+  max-width: 500px;
+}
+
+.person-focus-metrics {
+  background: rgba(90, 86, 75, 0.08);
+  border-radius: 8px;
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 26px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.person-focus-metrics div {
+  background: #faf7f2;
+  min-width: 0;
+  padding: 14px 12px;
+}
+
+.person-focus-metrics span {
+  color: var(--care-secondary);
+  display: block;
+  font-size: 10px;
+  font-weight: 780;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.person-focus-metrics strong {
+  color: var(--care-primary);
+  display: block;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 1.25;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
+.person-orbit-card {
+  background: rgba(255, 253, 248, 0.94);
+  border: 1px solid var(--care-border);
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(33, 31, 27, 0.1);
+  color: var(--care-primary);
+  min-width: 210px;
+  padding: 14px;
+  position: absolute;
+  z-index: 2;
+}
+
+.person-orbit-card > span,
+.person-orbit-card p {
+  color: var(--care-secondary);
+  display: block;
+  font-size: 12px;
+  font-weight: 720;
+  margin: 0;
+}
+
+.person-orbit-card > span {
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.person-orbit-card > strong,
+.person-orbit-card header strong {
+  color: var(--care-primary);
+  display: block;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 26px;
+  font-weight: 760;
+  line-height: 1;
+  margin-top: 8px;
+}
+
+.person-orbit-card p {
+  margin-top: 7px;
+}
+
+.person-orbit-heart {
+  left: 7%;
+  top: 15%;
+  width: 270px;
+}
+
+.person-orbit-watch {
+  right: 9%;
+  top: 18%;
+}
+
+.person-orbit-motion {
+  bottom: 20%;
+  left: 6%;
+}
+
+.person-orbit-rest {
+  bottom: 20%;
+  right: 8%;
+}
+
+.person-orbit-card header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.person-orbit-card .care-detail-kicker {
+  margin: 0;
+}
+
+.person-orbit-card header span:not(.person-live-pill span) {
+  color: var(--care-secondary);
+  display: block;
+  font-size: 12px;
+  font-weight: 720;
+  margin-top: 5px;
+}
+
+.person-orbit-card .person-live-pill {
+  background: #f4eee5;
+  border-color: #e1d6c8;
+  color: var(--care-primary);
+}
+
+.person-orbit-card .person-live-pill span {
+  background: var(--care-stable);
+}
+
+.person-orbit-card .person-heart-bars {
+  flex: 0 0 auto;
+  gap: 5px;
+  min-height: 72px;
+  margin-top: 14px;
+}
+
+.person-orbit-card .person-heart-bars span {
+  background: var(--care-primary);
+}
+
+.person-room-tray {
+  display: grid;
+  flex: 1;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.55fr);
+  min-height: 0;
+}
+
+.person-room-tray .person-week-card,
+.person-room-tray .person-alert-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(33, 31, 27, 0.05);
+  min-width: 0;
+}
+
 @media (max-width: 1180px) {
+  .person-room-stage {
+    align-items: stretch;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .person-focus-card {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+
+  .person-orbit-card {
+    min-width: 0;
+    position: relative;
+  }
+
+  .person-orbit-heart,
+  .person-orbit-watch,
+  .person-orbit-motion,
+  .person-orbit-rest {
+    bottom: auto;
+    left: auto;
+    right: auto;
+    top: auto;
+    width: auto;
+  }
+
+  .person-room-tray {
+    grid-template-columns: 1fr;
+  }
+
   .person-profile-stack {
     grid-template-areas:
       "profile"
@@ -7466,13 +7812,16 @@ button.care-sidebar-link {
   border-radius: 5px;
 }
 
-.rules-board .icon-button-primary {
+.rules-board .icon-button-primary,
+.rules-board .care-detail-action {
   background: var(--rules-action);
   border-color: var(--rules-action);
   color: #fff7e8;
 }
 
-.rules-board .icon-button-primary:hover {
+.rules-board .icon-button-primary:hover,
+.rules-board .care-detail-action:hover,
+.rules-board .care-detail-action:focus-visible {
   background: var(--rules-action-hover);
   border-color: var(--rules-action-hover);
 }
@@ -9035,5 +9384,626 @@ button.care-sidebar-link {
 
   .room-calm {
     padding: 34px 18px;
+  }
+}
+
+/* Profile room final cascade pass. Kept after alert-room styles so Turbopack emits it reliably. */
+.person-profile-board .person-profile-header {
+  display: none;
+}
+
+.person-room-view {
+  background:
+    linear-gradient(90deg, rgba(216, 204, 186, 0.2) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(216, 204, 186, 0.18) 1px, transparent 1px),
+    #f4efe7;
+  background-size: 44px 44px;
+  gap: 14px;
+  padding: 14px;
+}
+
+.person-room-topbar {
+  align-items: center;
+  background: rgba(255, 253, 248, 0.92);
+  border: 1px solid rgba(216, 204, 186, 0.8);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(33, 31, 27, 0.05);
+  display: flex;
+  flex: 0 0 auto;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 9px 10px;
+  position: relative;
+  z-index: 5;
+}
+
+.person-room-topbar .person-back-link {
+  color: var(--care-primary);
+  margin: 0;
+}
+
+.person-room-status {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.person-room-status span {
+  background: #f4eee5;
+  border: 1px solid #e6ded2;
+  border-radius: 999px;
+  color: var(--care-secondary);
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1;
+  padding: 8px 11px;
+  white-space: nowrap;
+}
+
+.person-room-stage {
+  align-items: stretch;
+  display: grid;
+  flex: 0 0 auto;
+  gap: 14px;
+  grid-template-areas:
+    "heart focus watch"
+    "motion focus rest";
+  grid-template-columns: minmax(190px, 0.74fr) minmax(420px, 1.55fr) minmax(190px, 0.74fr);
+  grid-template-rows: repeat(2, minmax(190px, 1fr));
+  min-height: clamp(470px, 55vh, 590px);
+  overflow: visible;
+  position: relative;
+}
+
+.person-focus-card {
+  --person-glow: rgba(21, 128, 61, 0.16);
+  display: flex;
+  grid-area: focus;
+  max-width: none;
+  position: relative;
+  width: 100%;
+  z-index: 4;
+}
+
+.person-focus-pulse {
+  animation: room-pulse 3.8s ease-in-out infinite;
+  border: 3px solid var(--person-glow);
+  border-radius: 18px;
+  inset: -10px;
+  pointer-events: none;
+  position: absolute;
+}
+
+.person-focus-content {
+  background: #fffdf8;
+  border: 1px solid var(--care-border);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(90, 86, 75, 0.04),
+    0 28px 70px rgba(33, 31, 27, 0.16),
+    0 4px 12px rgba(33, 31, 27, 0.08);
+  align-content: center;
+  display: grid;
+  height: 100%;
+  justify-items: center;
+  overflow: hidden;
+  padding: 32px 28px 28px;
+  position: relative;
+  text-align: center;
+  width: 100%;
+}
+
+.person-focus-photo {
+  aspect-ratio: 1;
+  border: 4px solid #fffdf8;
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(33, 31, 27, 0.18);
+  display: block;
+  height: 138px;
+  object-fit: cover;
+  width: 138px;
+}
+
+.person-focus-kicker,
+.person-focus-content h2,
+.person-focus-subtitle,
+.person-focus-summary {
+  margin: 0;
+}
+
+.person-focus-kicker {
+  color: var(--care-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  margin-top: 18px;
+  text-transform: uppercase;
+}
+
+.person-focus-content h2 {
+  color: var(--care-primary);
+  font-size: clamp(34px, 3.7vw, 46px);
+  font-weight: 820;
+  letter-spacing: 0;
+  line-height: 1.02;
+  margin-top: 7px;
+}
+
+.person-focus-subtitle {
+  color: var(--care-secondary);
+  font-size: 14px;
+  font-weight: 720;
+  margin-top: 9px;
+}
+
+.person-focus-summary {
+  color: var(--care-secondary);
+  font-size: 15px;
+  font-weight: 560;
+  line-height: 1.55;
+  margin-top: 18px;
+  max-width: 500px;
+}
+
+.person-focus-metrics {
+  background: rgba(90, 86, 75, 0.08);
+  border-radius: 8px;
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 26px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.person-focus-metrics div {
+  background: #faf7f2;
+  min-width: 0;
+  padding: 14px 12px;
+}
+
+.person-focus-metrics span {
+  color: var(--care-secondary);
+  display: block;
+  font-size: 10px;
+  font-weight: 780;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.person-focus-metrics strong {
+  color: var(--care-primary);
+  display: block;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 1.25;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
+.person-orbit-card {
+  background: rgba(255, 253, 248, 0.94);
+  border: 1px solid var(--care-border);
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(33, 31, 27, 0.1);
+  color: var(--care-primary);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 190px;
+  overflow: hidden;
+  padding: 14px;
+  position: relative;
+  z-index: 2;
+}
+
+.person-orbit-card > span,
+.person-orbit-card p {
+  color: var(--care-secondary);
+  display: block;
+  font-size: 12px;
+  font-weight: 720;
+  margin: 0;
+}
+
+.person-orbit-card > span {
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.person-orbit-card > strong,
+.person-orbit-card header strong {
+  color: var(--care-primary);
+  display: block;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 24px;
+  font-weight: 760;
+  line-height: 1;
+  margin-top: 8px;
+}
+
+.person-orbit-card p {
+  margin-top: 7px;
+}
+
+.person-orbit-heart {
+  grid-area: heart;
+  width: auto;
+}
+
+.person-orbit-watch {
+  grid-area: watch;
+}
+
+.person-orbit-motion {
+  grid-area: motion;
+}
+
+.person-orbit-rest {
+  grid-area: rest;
+}
+
+.person-orbit-card header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.person-orbit-card .care-detail-kicker {
+  margin: 0;
+}
+
+.person-orbit-card header span:not(.person-live-pill span) {
+  color: var(--care-secondary);
+  display: block;
+  font-size: 12px;
+  font-weight: 720;
+  margin-top: 5px;
+}
+
+.person-orbit-card .person-live-pill {
+  background: #f4eee5;
+  border-color: #e1d6c8;
+  color: var(--care-primary);
+}
+
+.person-orbit-card .person-live-pill span {
+  background: var(--care-stable);
+}
+
+.person-orbit-card .person-heart-bars {
+  gap: 5px;
+  min-height: 92px;
+  margin-top: 14px;
+}
+
+.person-orbit-card .person-heart-bars span {
+  background: var(--care-primary);
+}
+
+.person-room-tray {
+  display: grid;
+  flex: 1;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.55fr);
+  min-height: 0;
+}
+
+.person-room-tray .person-week-card,
+.person-room-tray .person-alert-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(33, 31, 27, 0.05);
+  min-width: 0;
+}
+
+@media (max-width: 1180px) {
+  .person-room-stage {
+    align-items: stretch;
+    display: grid;
+    gap: 10px;
+    grid-template-areas:
+      "focus focus"
+      "heart watch"
+      "motion rest";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .person-focus-card {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+
+  .person-orbit-card {
+    min-width: 0;
+    position: relative;
+  }
+
+  .person-orbit-heart,
+  .person-orbit-watch,
+  .person-orbit-motion,
+  .person-orbit-rest {
+    bottom: auto;
+    left: auto;
+    right: auto;
+    top: auto;
+    width: auto;
+  }
+
+  .person-room-tray {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .person-room-view {
+    padding: 10px;
+  }
+
+  .person-room-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .person-room-stage,
+  .person-focus-metrics,
+  .person-room-tray {
+    grid-template-columns: 1fr;
+  }
+
+  .person-room-stage {
+    grid-template-areas:
+      "focus"
+      "heart"
+      "watch"
+      "motion"
+      "rest";
+  }
+
+  .person-focus-content {
+    padding: 30px 18px 22px;
+  }
+
+  .person-focus-photo {
+    height: 126px;
+    width: 126px;
+  }
+}
+
+/* Profile bento alignment overrides. */
+.person-room-stage {
+  grid-template-rows: repeat(2, minmax(230px, 1fr));
+  min-height: clamp(490px, 56vh, 610px);
+}
+
+.person-orbit-card {
+  align-self: stretch;
+  height: 100%;
+  justify-self: stretch;
+}
+
+.person-orbit-card .person-heart-bars {
+  display: none;
+}
+
+.person-orbit-heart {
+  justify-content: space-between;
+}
+
+.person-orbit-heart > p {
+  display: none;
+}
+
+.person-focus-card {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.person-orbit-heart {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.person-orbit-motion {
+  grid-column: 1;
+  grid-row: 2;
+  margin-top: 14px;
+}
+
+.person-orbit-watch {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.person-orbit-rest {
+  grid-column: 3;
+  grid-row: 2;
+  margin-top: 14px;
+}
+
+@media (max-width: 1180px) {
+  .person-room-stage {
+    grid-template-rows: auto;
+    min-height: 0;
+  }
+
+  .person-focus-card,
+  .person-orbit-heart,
+  .person-orbit-motion,
+  .person-orbit-watch,
+  .person-orbit-rest {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+/* Profile bento hard reset: normal-flow panels only, no overlap mechanics. */
+.person-room-view {
+  gap: 12px;
+}
+
+.person-room-stage {
+  align-items: stretch;
+  display: grid;
+  flex: 0 0 auto;
+  gap: 12px;
+  grid-template-areas:
+    "focus focus focus focus"
+    "heart watch motion rest";
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: minmax(360px, auto) minmax(150px, auto);
+  min-height: 0;
+  overflow: visible;
+  position: static;
+}
+
+.person-focus-card,
+.person-orbit-card,
+.person-room-tray .person-week-card,
+.person-room-tray .person-alert-card {
+  box-shadow: 0 1px 2px rgba(33, 31, 27, 0.05);
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+  z-index: auto;
+}
+
+.person-focus-pulse {
+  display: none;
+}
+
+.person-focus-card {
+  display: flex;
+  grid-area: focus;
+  max-width: none;
+  width: 100%;
+}
+
+.person-focus-content {
+  align-content: center;
+  border-radius: 8px;
+  box-shadow: none;
+  height: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.person-orbit-card {
+  align-self: stretch;
+  border-radius: 8px;
+  inset: auto;
+  height: auto;
+  justify-self: stretch;
+  min-height: 0;
+  transform: none;
+}
+
+.person-focus-content {
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-items: start;
+  text-align: left;
+}
+
+.person-focus-photo {
+  grid-row: 1 / span 5;
+  margin-right: 28px;
+}
+
+.person-focus-kicker,
+.person-focus-content h2,
+.person-focus-subtitle,
+.person-focus-summary {
+  justify-self: stretch;
+}
+
+.person-focus-metrics {
+  grid-column: 2;
+}
+
+.person-orbit-heart {
+  grid-area: heart;
+  margin: 0;
+  width: auto;
+}
+
+.person-orbit-motion {
+  grid-area: motion;
+  margin: 0;
+}
+
+.person-orbit-watch {
+  grid-area: watch;
+}
+
+.person-orbit-rest {
+  grid-area: rest;
+  margin: 0;
+}
+
+.person-room-tray {
+  align-items: start;
+  display: grid;
+  flex: 0 0 auto;
+  gap: 12px;
+  grid-template-areas: "medication alerts";
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  min-height: 0;
+}
+
+.person-room-tray .person-week-card {
+  grid-area: medication;
+}
+
+.person-room-tray .person-alert-card {
+  grid-area: alerts;
+}
+
+@media (max-width: 1180px) {
+  .person-room-stage {
+    grid-template-areas:
+      "focus focus"
+      "heart watch"
+      "motion rest";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+
+  .person-room-tray {
+    grid-template-areas:
+      "medication"
+      "alerts";
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .person-room-stage {
+    grid-template-areas:
+      "focus"
+      "heart"
+      "watch"
+      "motion"
+      "rest";
+    grid-template-columns: 1fr;
+  }
+
+  .person-focus-content {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .person-focus-photo {
+    grid-row: auto;
+    margin-right: 0;
+  }
+
+  .person-focus-metrics {
+    grid-column: auto;
   }
 }

@@ -42,8 +42,8 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
       .flat()
       .sort((first, second) => first.time.localeCompare(second.time))[0]?.time ?? "None";
   const oxygenLevel = `${96 + (person.sort_order % 3)}%`;
-  const stepCount = (1800 + person.sort_order * 312).toLocaleString("en-US");
-  const sleepDuration = `${6 + (person.sort_order % 3)}h ${12 + person.sort_order * 4}m`;
+  const stepCount = (1800 + (person.sort_order % 20) * 312).toLocaleString("en-US");
+  const sleepDuration = `${6 + (person.sort_order % 3)}h ${12 + (person.sort_order % 10) * 4}m`;
 
   return (
     <main className="care-app-page">
@@ -69,56 +69,68 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
               </div>
             </header>
 
-            <section className="person-profile-view">
-              <div className="person-profile-stack">
-                <section className="person-profile-card" aria-label="Profile summary">
-                  <div className="person-profile-top">
-                    <div className="person-profile-photo">
-                      <Image
-                        src={image.photo}
-                        alt={`${person.name} profile photo`}
-                        width={92}
-                        height={92}
-                        unoptimized
-                      />
-                    </div>
-                    <div className="person-profile-copy">
-                      <h2>{person.name}</h2>
-                      <p>
-                        Senior <span aria-hidden="true">&middot;</span> Age {person.age}
-                      </p>
-                    </div>
-                    <span className="person-status-pill">{person.status}</span>
-                  </div>
-                  <p className="person-profile-body">{person.context || person.status}</p>
-                  <div className="person-metric-row">
-                    <div className="person-metric-tile">
-                      <span>Location</span>
-                      <strong>Home</strong>
-                    </div>
-                    <div className="person-metric-tile">
-                      <span>Last seen</span>
-                      <strong>{person.last_seen_label}</strong>
-                    </div>
-                  </div>
-                </section>
+            <section className="person-profile-view person-room-view">
+              <div className="person-room-topbar" aria-label="Profile controls">
+                <Link className="person-back-link" href="/app/dashboard">
+                  Back to workspace
+                </Link>
+                <div className="person-room-status" aria-label="Profile status">
+                  <span>{alerts.length === 0 ? "No active alerts" : `${alerts.length} active alerts`}</span>
+                  <span>{formatWatchBattery(person.watch_battery_percent)} watch</span>
+                  <span>{person.last_seen_label}</span>
+                </div>
+              </div>
 
-                <section className="person-heart-card" aria-label="Heartbeat monitor">
+              <div className="person-room-stage">
+                <article className="person-focus-card" aria-label="Profile summary">
+                  <div className="person-focus-pulse" aria-hidden="true" />
+                  <div className="person-focus-content">
+                    <Image
+                      className="person-focus-photo"
+                      src={image.photo}
+                      alt={`${person.name} profile photo`}
+                      width={154}
+                      height={154}
+                      priority
+                      unoptimized
+                    />
+                    <p className="person-focus-kicker">Senior profile</p>
+                    <h2>{person.name}</h2>
+                    <p className="person-focus-subtitle">Age {person.age} · Home · {person.status}</p>
+                    <p className="person-focus-summary">{person.context || person.status}</p>
+
+                    <div className="person-focus-metrics" aria-label="Primary metrics">
+                      <div>
+                        <span>Heart rate</span>
+                        <strong>{person.heart_rate_bpm ?? "--"} bpm</strong>
+                      </div>
+                      <div>
+                        <span>Oxygen</span>
+                        <strong>{oxygenLevel}</strong>
+                      </div>
+                      <div>
+                        <span>Next med</span>
+                        <strong>{nextMedication}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                <section className="person-orbit-card person-orbit-heart" aria-label="Heartbeat monitor">
                   <header>
                     <div>
-                      <p className="care-detail-kicker">Heartbeat monitor</p>
-                      <h2>{person.heart_rate_bpm ?? "--"}</h2>
-                      <span>beats per minute</span>
+                      <p className="care-detail-kicker">Heartbeat</p>
+                      <strong>{person.heart_rate_bpm ?? "--"}</strong>
+                      <span>bpm now</span>
                     </div>
                     <div className="person-live-pill">
                       <span aria-hidden="true" />
                       Live
                     </div>
                   </header>
-
                   <div className="person-heart-bars" aria-label="Recent heart rate samples">
                     {heartBars.map((sample, index) => {
-                      const height = 28 + ((sample - minHeartRate) / heartRange) * 54;
+                      const height = 24 + ((sample - minHeartRate) / heartRange) * 46;
                       return (
                         <span
                           key={`${person.id}-heart-bar-${index}`}
@@ -128,30 +140,29 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                       );
                     })}
                   </div>
-                  <p>
-                    Normal resting range for {person.name.split(" ")[0]}: {minHeartRate}-{maxHeartRate} bpm.
-                  </p>
+                  <p>{minHeartRate}-{maxHeartRate} bpm recent range</p>
                 </section>
 
-                <div className="person-metric-grid" aria-label="Care metrics">
-                  <div className="person-metric-tile">
-                    <span>Oxygen</span>
-                    <strong>{oxygenLevel}</strong>
-                  </div>
-                  <div className="person-metric-tile">
-                    <span>Steps</span>
-                    <strong>{stepCount}</strong>
-                  </div>
-                  <div className="person-metric-tile">
-                    <span>Sleep</span>
-                    <strong>{sleepDuration}</strong>
-                  </div>
-                  <div className="person-metric-tile">
-                    <span>Next med</span>
-                    <strong>{nextMedication}</strong>
-                  </div>
-                </div>
+                <section className="person-orbit-card person-orbit-watch" aria-label="Watch status">
+                  <span>Watch</span>
+                  <strong>{formatWatchBattery(person.watch_battery_percent)}</strong>
+                  <p>{person.status}</p>
+                </section>
 
+                <section className="person-orbit-card person-orbit-motion" aria-label="Movement">
+                  <span>Movement</span>
+                  <strong>{stepCount}</strong>
+                  <p>steps today</p>
+                </section>
+
+                <section className="person-orbit-card person-orbit-rest" aria-label="Rest">
+                  <span>Sleep</span>
+                  <strong>{sleepDuration}</strong>
+                  <p>last night</p>
+                </section>
+              </div>
+
+              <div className="person-room-tray">
                 <section className="person-week-card" aria-label="Medication schedule">
                   <header>
                     <div>

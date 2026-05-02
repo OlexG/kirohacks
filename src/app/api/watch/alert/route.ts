@@ -1,4 +1,9 @@
 import { recordSabawoonWatchAlert } from "@/lib/biometrics-data";
+import {
+  FallRiskEnvelopeError,
+  isFallRiskEnvelope,
+  recordSabawoonFallRiskEnvelope,
+} from "@/lib/fall-risk";
 
 export const runtime = "nodejs";
 
@@ -16,9 +21,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    const data = await recordSabawoonWatchAlert(payload as Record<string, unknown>);
+    const payloadObject = payload as Record<string, unknown>;
+    const data = isFallRiskEnvelope(payloadObject)
+      ? await recordSabawoonFallRiskEnvelope(payloadObject)
+      : await recordSabawoonWatchAlert(payloadObject);
+
     return Response.json({ ok: true, data }, { status: 201 });
   } catch (error) {
+    if (error instanceof FallRiskEnvelopeError) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
+
     const message = error instanceof Error ? error.message : "Unable to record biometrics data.";
     return Response.json({ error: message }, { status: 500 });
   }
