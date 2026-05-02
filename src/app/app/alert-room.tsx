@@ -214,17 +214,17 @@ function OrbitTile({
 }>) {
   const signal = getSignalGroup(alert);
   const orbitSlots = [
-    { x: 24, y: 22 },
-    { x: 76, y: 22 },
-    { x: 16, y: 48 },
-    { x: 84, y: 48 },
-    { x: 25, y: 74 },
-    { x: 75, y: 74 },
+    { x: 16, y: 22 },
+    { x: 84, y: 22 },
+    { x: 10, y: 48 },
+    { x: 90, y: 48 },
+    { x: 17, y: 74 },
+    { x: 83, y: 74 },
     { x: 50, y: 12 },
     { x: 50, y: 84 },
   ];
   const slot = orbitSlots[index % orbitSlots.length];
-  const severityDistance = alert.severity === "urgent" ? 0.82 : alert.severity === "warning" ? 0.96 : 1.08;
+  const severityDistance = alert.severity === "urgent" ? 0.94 : alert.severity === "warning" ? 1.04 : 1.12;
   const cycleOffset = Math.floor(index / orbitSlots.length) * 4;
   const x = 50 + (slot.x - 50) * severityDistance;
   const y = 50 + (slot.y - 50) * severityDistance + cycleOffset;
