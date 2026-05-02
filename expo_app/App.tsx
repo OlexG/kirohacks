@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -12,10 +12,16 @@ import {
 type TabKey = "care" | "medication" | "alerts" | "devices";
 type AlertTone = "urgent" | "warning" | "info";
 
+declare const process: {
+  env?: Record<string, string | undefined>;
+};
+
 type MedicationDose = {
   id: string;
   name: string;
+  description: string;
   dose: string;
+  delivery: string;
   time: string;
   instructions: string;
 };
@@ -27,6 +33,82 @@ type MedicationDay = {
   date: string;
   administered: boolean;
   doses: MedicationDose[];
+};
+
+type ElderProfile = {
+  name: string;
+  preferredName: string;
+  relation: string;
+  age: number;
+  status: string;
+  statusDetail: string;
+  location: string;
+  lastSeen: string;
+  heartRate: number;
+  oxygen: string;
+  steps: string;
+  sleep: string;
+  initials: string;
+};
+
+type AlertItem = {
+  tone: AlertTone;
+  title: string;
+  body: string;
+  time: string;
+};
+
+type AppData = {
+  elder: ElderProfile;
+  heartSamples: number[];
+  medicationWeek: MedicationDay[];
+  alerts: AlertItem[];
+  deviceMetrics: string[][];
+};
+
+type CarePersonRow = {
+  id: string;
+  name: string;
+  age: number | null;
+  care_group: string | null;
+  status: string | null;
+  heart_rate_bpm: number | null;
+  last_seen_label: string | null;
+  watch_battery_percent: number | null;
+  initials: string | null;
+  alert: "urgent" | "warning" | "stable" | "offline" | null;
+  context: string | null;
+};
+
+type CareRuleRow = {
+  id: string;
+  signal_label: string | null;
+  operator: string | null;
+  threshold: number | null;
+  unit: string | null;
+  severity: "info" | "review" | "urgent" | null;
+  active: boolean | null;
+  notification_channel: string | null;
+  notes: string | null;
+};
+
+type MedicationRow = {
+  id?: string;
+  elder_id?: string;
+  name?: string;
+  medication_name?: string;
+  description?: string;
+  delivery_method?: string;
+  dose?: string;
+  dosage?: string;
+  time?: string;
+  scheduled_time?: string;
+  instructions?: string;
+  notes?: string;
+  day_of_week?: number | string;
+  weekday?: number | string;
+  weekly_schedule?: Record<string, Array<{ dose?: string; dosage?: string; time?: string }>>;
+  administered?: boolean;
 };
 
 const colors = {
@@ -41,25 +123,31 @@ const colors = {
   white: "#FFFCF8",
 };
 
-const elder = {
-  name: "Eleanor Ward",
-  preferredName: "Eleanor",
-  relation: "Mom",
-  age: 82,
-  status: "Stable",
-  statusDetail: "Resting at home after a morning walk.",
-  location: "Living room",
-  lastSeen: "2 min ago",
-  heartRate: 72,
-  oxygen: "97%",
-  steps: "2,418",
-  sleep: "7h 12m",
-  initials: "EW",
+const PERSON_ID = "person-sabawoon-hakimi";
+const SUPABASE_URL =
+  process.env?.EXPO_PUBLIC_SUPABASE_URL ?? process.env?.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const SUPABASE_ANON_KEY =
+  process.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
+const defaultElder: ElderProfile = {
+  name: "Sabawoon Hakimi",
+  preferredName: "Sabawoon",
+  relation: "Care member",
+  age: 77,
+  status: "Loading live data",
+  statusDetail: "Fetching the latest Supabase record for Sabawoon Hakimi.",
+  location: "Watch list",
+  lastSeen: "Syncing",
+  heartRate: 112,
+  oxygen: "--",
+  steps: "--",
+  sleep: "--",
+  initials: "SH",
 };
 
-const heartSamples = [68, 70, 69, 73, 72, 76, 74, 71, 72, 75, 73, 72];
+const defaultHeartSamples = [104, 108, 112, 110, 115, 113, 109, 111, 116, 112, 108, 110];
 
-const medicationWeek: MedicationDay[] = [
+const defaultMedicationWeek: MedicationDay[] = [
   {
     key: 0,
     label: "Sunday",
@@ -70,9 +158,11 @@ const medicationWeek: MedicationDay[] = [
       {
         id: "sun-aspirin",
         name: "Aspirin",
+        description: "Low-dose aspirin. Demo seed data only.",
         dose: "81 mg",
+        delivery: "Oral tablet",
         time: "8:00 AM",
-        instructions: "Give with breakfast and a full glass of water.",
+        instructions: "Confirm with Sabawoon's live care plan.",
       },
     ],
   },
@@ -86,14 +176,18 @@ const medicationWeek: MedicationDay[] = [
       {
         id: "mon-lisinopril",
         name: "Lisinopril",
+        description: "Blood pressure medication. Demo fallback only.",
         dose: "10 mg",
+        delivery: "Oral tablet",
         time: "8:00 AM",
         instructions: "Check blood pressure before administering.",
       },
       {
         id: "mon-atorvastatin",
         name: "Atorvastatin",
+        description: "Cholesterol medication. Demo fallback only.",
         dose: "20 mg",
+        delivery: "Oral tablet",
         time: "8:00 PM",
         instructions: "Evening dose. Confirm she has eaten dinner.",
       },
@@ -109,14 +203,18 @@ const medicationWeek: MedicationDay[] = [
       {
         id: "tue-lisinopril",
         name: "Lisinopril",
+        description: "Blood pressure medication. Demo fallback only.",
         dose: "10 mg",
+        delivery: "Oral tablet",
         time: "8:00 AM",
         instructions: "Morning dose pending confirmation.",
       },
       {
         id: "tue-donepezil",
         name: "Donepezil",
+        description: "Cognitive support medication. Demo fallback only.",
         dose: "5 mg",
+        delivery: "Oral tablet",
         time: "7:30 PM",
         instructions: "Give before bedtime routine.",
       },
@@ -132,7 +230,9 @@ const medicationWeek: MedicationDay[] = [
       {
         id: "wed-aspirin",
         name: "Aspirin",
+        description: "Low-dose aspirin. Demo fallback only.",
         dose: "81 mg",
+        delivery: "Oral tablet",
         time: "8:00 AM",
         instructions: "Give with breakfast.",
       },
@@ -148,7 +248,9 @@ const medicationWeek: MedicationDay[] = [
       {
         id: "thu-lisinopril",
         name: "Lisinopril",
+        description: "Blood pressure medication. Demo fallback only.",
         dose: "10 mg",
+        delivery: "Oral tablet",
         time: "8:00 AM",
         instructions: "Check blood pressure before administering.",
       },
@@ -164,14 +266,18 @@ const medicationWeek: MedicationDay[] = [
       {
         id: "fri-aspirin",
         name: "Aspirin",
+        description: "Low-dose aspirin. Demo fallback only.",
         dose: "81 mg",
+        delivery: "Oral tablet",
         time: "8:00 AM",
         instructions: "Give with breakfast.",
       },
       {
         id: "fri-atorvastatin",
         name: "Atorvastatin",
+        description: "Cholesterol medication. Demo fallback only.",
         dose: "20 mg",
+        delivery: "Oral tablet",
         time: "8:00 PM",
         instructions: "Evening dose.",
       },
@@ -187,39 +293,35 @@ const medicationWeek: MedicationDay[] = [
   },
 ];
 
-const alerts = [
+const defaultAlerts: AlertItem[] = [
   {
-    tone: "urgent" as AlertTone,
-    title: "Missed medication",
-    body: "Tuesday morning Lisinopril has not been marked administered.",
-    time: "12 min ago",
+    tone: "warning",
+    title: "Waiting for live alerts",
+    body: "Live alerts and care rules will load for Sabawoon Hakimi when Supabase is reachable.",
+    time: "Now",
   },
   {
-    tone: "warning" as AlertTone,
-    title: "Abnormal biometric reading",
-    body: "Heart rate briefly rose above 105 bpm while Eleanor was seated.",
-    time: "38 min ago",
-  },
-  {
-    tone: "warning" as AlertTone,
-    title: "Fall sensitivity event",
-    body: "Apple Watch detected a stumble near the hallway. Eleanor tapped I am OK.",
-    time: "Yesterday",
-  },
-  {
-    tone: "info" as AlertTone,
-    title: "Low movement window",
-    body: "Movement was lower than usual between 1:00 PM and 3:00 PM.",
-    time: "Yesterday",
+    tone: "info",
+    title: "Scoped person",
+    body: `This app is filtered to ${PERSON_ID}.`,
+    time: "Live seed",
   },
 ];
 
-const deviceMetrics = [
+const defaultDeviceMetrics = [
   ["Connection", "Connected"],
-  ["Battery", "68%"],
-  ["Last sync", "1 min ago"],
-  ["WatchOS", "11.4"],
+  ["Battery", "--"],
+  ["Last sync", "Syncing"],
+  ["Data source", "Supabase"],
 ];
+
+const defaultAppData: AppData = {
+  elder: defaultElder,
+  heartSamples: defaultHeartSamples,
+  medicationWeek: defaultMedicationWeek,
+  alerts: defaultAlerts,
+  deviceMetrics: defaultDeviceMetrics,
+};
 
 const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "care", label: "Care" },
@@ -227,6 +329,209 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "alerts", label: "Alerts" },
   { key: "devices", label: "Devices" },
 ];
+
+function getSupabaseHeaders() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+
+  return {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+  };
+}
+
+async function fetchSupabaseRows<T>(table: string, query: string) {
+  const headers = getSupabaseHeaders();
+  if (!headers) return [];
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    headers,
+  });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  return (await response.json()) as T[];
+}
+
+function titleCase(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function initialsFromName(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+function buildHeartSamples(base: number) {
+  return Array.from({ length: 12 }, (_, index) => {
+    const wave = Math.sin(index * 0.75) * 5 + Math.cos(index * 1.2) * 3;
+    return Math.max(0, Math.round(base + wave));
+  });
+}
+
+function formatRuleBody(rule: CareRuleRow) {
+  if (rule.notes) return rule.notes;
+
+  const threshold =
+    rule.threshold === null || rule.threshold === undefined
+      ? ""
+      : ` ${rule.threshold}${rule.unit ? ` ${rule.unit}` : ""}`;
+
+  return `${rule.signal_label ?? "Care signal"} ${rule.operator ?? "changed"}${threshold}.`;
+}
+
+function mapRuleTone(severity: CareRuleRow["severity"]): AlertTone {
+  if (severity === "urgent") return "urgent";
+  if (severity === "review") return "warning";
+  return "info";
+}
+
+function normalizeMedicationDay(value: MedicationRow["day_of_week"] | MedicationRow["weekday"]) {
+  const numeric = Number(value);
+  return Number.isInteger(numeric) && numeric >= 0 && numeric <= 6 ? numeric : null;
+}
+
+const dayKeyByName: Record<string, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+
+function buildDoseFromMedication(
+  row: MedicationRow,
+  dayKey: number,
+  scheduleIndex: number,
+  scheduleDose?: { dose?: string; dosage?: string; time?: string },
+) {
+  const name = row.name ?? row.medication_name ?? "Medication";
+  const dose = scheduleDose?.dose ?? scheduleDose?.dosage ?? row.dose ?? row.dosage ?? "As directed";
+  const delivery = row.delivery_method ?? "Delivery method not specified";
+  const description = row.description ?? row.notes ?? "No medication description provided.";
+
+  return {
+    id: `${row.id ?? name}-${dayKey}-${scheduleIndex}`,
+    name,
+    description,
+    dose,
+    delivery,
+    time: scheduleDose?.time ?? row.time ?? row.scheduled_time ?? "Scheduled",
+    instructions: row.instructions ?? description,
+  } satisfies MedicationDose;
+}
+
+function buildMedicationWeek(rows: MedicationRow[]) {
+  if (rows.length === 0) return defaultMedicationWeek;
+
+  return defaultMedicationWeek.map((day) => {
+    const doses = rows.flatMap((row, rowIndex) => {
+      if (row.weekly_schedule) {
+        return Object.entries(row.weekly_schedule).flatMap(([dayName, schedule]) => {
+          if (dayKeyByName[dayName.toLowerCase()] !== day.key) return [];
+
+          return schedule.map((scheduleDose, scheduleIndex) =>
+            buildDoseFromMedication(row, day.key, scheduleIndex, scheduleDose),
+          );
+        });
+      }
+
+      return normalizeMedicationDay(row.day_of_week ?? row.weekday) === day.key
+        ? [buildDoseFromMedication(row, day.key, rowIndex)]
+        : [];
+    });
+
+    return {
+      ...day,
+      administered: doses.length > 0 && rows.some((row) => row.administered),
+      doses,
+    };
+  });
+}
+
+function mapLiveData(person: CarePersonRow, rules: CareRuleRow[], medications: MedicationRow[]) {
+  const heartRate = person.heart_rate_bpm ?? 0;
+  const name = person.name || defaultElder.name;
+  const personAlertTone: AlertTone =
+    person.alert === "urgent" ? "urgent" : person.alert === "warning" ? "warning" : "info";
+  const alerts = rules.length
+    ? rules
+        .filter((rule) => rule.active !== false)
+        .map<AlertItem>((rule) => ({
+          tone: mapRuleTone(rule.severity),
+          title: rule.signal_label ?? "Care rule",
+          body: formatRuleBody(rule),
+          time: rule.notification_channel ?? "Live rule",
+        }))
+    : [
+        {
+          tone: personAlertTone,
+          title: person.status ?? "Live care status",
+          body: person.context ?? "Latest Supabase care_people record loaded for Sabawoon Hakimi.",
+          time: person.last_seen_label ?? "Live",
+        },
+      ];
+
+  return {
+    elder: {
+      name,
+      preferredName: name.split(" ")[0] ?? "Sabawoon",
+      relation: "Care member",
+      age: person.age ?? defaultElder.age,
+      status: person.status ?? defaultElder.status,
+      statusDetail: person.context ?? defaultElder.statusDetail,
+      location: person.care_group ? titleCase(person.care_group) : defaultElder.location,
+      lastSeen: person.last_seen_label ?? defaultElder.lastSeen,
+      heartRate,
+      oxygen: "--",
+      steps: "--",
+      sleep: "--",
+      initials: person.initials ?? initialsFromName(name),
+    },
+    heartSamples: heartRate > 0 ? buildHeartSamples(heartRate) : defaultHeartSamples,
+    medicationWeek: buildMedicationWeek(medications),
+    alerts,
+    deviceMetrics: [
+      ["Connection", person.alert === "offline" ? "Disconnected" : "Connected"],
+      ["Battery", person.watch_battery_percent === null ? "--" : `${person.watch_battery_percent}%`],
+      ["Last sync", person.last_seen_label ?? "--"],
+      ["Person ID", PERSON_ID],
+    ],
+  } satisfies AppData;
+}
+
+async function loadSabawoonData() {
+  const personRows = await fetchSupabaseRows<CarePersonRow>(
+    "care_people",
+    `select=*&id=eq.${PERSON_ID}&active=eq.true&limit=1`,
+  );
+
+  const person = personRows[0];
+  if (!person) return defaultAppData;
+
+  const [rules, medications] = await Promise.all([
+    fetchSupabaseRows<CareRuleRow>(
+      "care_rules",
+      `select=*&person_id=eq.${PERSON_ID}&order=created_at.desc`,
+    ),
+    fetchSupabaseRows<MedicationRow>(
+      "medications",
+      `select=*&elder_id=eq.${PERSON_ID}&order=created_at.asc`,
+    ),
+  ]);
+
+  return mapLiveData(person, rules, medications);
+}
 
 function HeartMark() {
   return (
@@ -252,7 +557,13 @@ function ActionButton({
   );
 }
 
-function HeartMonitor() {
+function HeartMonitor({
+  elder,
+  heartSamples,
+}: {
+  readonly elder: ElderProfile;
+  readonly heartSamples: number[];
+}) {
   const max = Math.max(...heartSamples);
   const min = Math.min(...heartSamples);
   const range = Math.max(max - min, 1);
@@ -282,7 +593,9 @@ function HeartMonitor() {
           );
         })}
       </View>
-      <Text style={styles.monitorNote}>Normal resting range for Eleanor: 62-92 bpm.</Text>
+      <Text style={styles.monitorNote}>
+        Normal resting range for {elder.preferredName}: 62-92 bpm.
+      </Text>
     </View>
   );
 }
@@ -302,7 +615,13 @@ function MetricTile({
   );
 }
 
-function CareView() {
+function CareView({
+  elder,
+  heartSamples,
+}: {
+  readonly elder: ElderProfile;
+  readonly heartSamples: number[];
+}) {
   return (
     <View style={styles.stack}>
       <View style={styles.profileCard}>
@@ -327,7 +646,7 @@ function CareView() {
         </View>
       </View>
 
-      <HeartMonitor />
+      <HeartMonitor elder={elder} heartSamples={heartSamples} />
 
       <View style={styles.metricGrid}>
         <MetricTile label="Oxygen" value={elder.oxygen} />
@@ -340,11 +659,13 @@ function CareView() {
 }
 
 function MedicationView({
+  medicationWeek,
   selectedDay,
   administeredDays,
   onSelectDay,
   onToggleDay,
 }: {
+  readonly medicationWeek: MedicationDay[];
   readonly selectedDay: MedicationDay;
   readonly administeredDays: Record<number, boolean>;
   readonly onSelectDay: (day: MedicationDay) => void;
@@ -412,7 +733,17 @@ function MedicationView({
                   <Text style={styles.doseTime}>{dose.time}</Text>
                   <Text style={styles.doseName}>{dose.name}</Text>
                 </View>
-                <Text style={styles.doseAmount}>{dose.dose}</Text>
+                <Text style={styles.doseDescription}>{dose.description}</Text>
+                <View style={styles.doseMetaRow}>
+                  <View style={styles.doseMetaPill}>
+                    <Text style={styles.doseMetaLabel}>Dosage</Text>
+                    <Text style={styles.doseMetaValue}>{dose.dose}</Text>
+                  </View>
+                  <View style={styles.doseMetaPill}>
+                    <Text style={styles.doseMetaLabel}>Delivery</Text>
+                    <Text style={styles.doseMetaValue}>{dose.delivery}</Text>
+                  </View>
+                </View>
                 <Text style={styles.doseInstructions}>{dose.instructions}</Text>
               </View>
             ))}
@@ -423,7 +754,7 @@ function MedicationView({
   );
 }
 
-function AlertsView() {
+function AlertsView({ alerts }: Readonly<{ alerts: AlertItem[] }>) {
   return (
     <View style={styles.stack}>
       {alerts.map((alert) => (
@@ -452,7 +783,10 @@ function AlertsView() {
   );
 }
 
-function DevicesView() {
+function DevicesView({
+  elder,
+  deviceMetrics,
+}: Readonly<{ elder: ElderProfile; deviceMetrics: string[][] }>) {
   return (
     <View style={styles.stack}>
       <View style={styles.watchCard}>
@@ -464,7 +798,7 @@ function DevicesView() {
           </View>
           <View style={styles.watchStrapBottom} />
         </View>
-        <Text style={styles.watchTitle}>Eleanor's Apple Watch</Text>
+        <Text style={styles.watchTitle}>{elder.preferredName}'s Apple Watch</Text>
         <Text style={styles.watchSubtitle}>
           Connected, syncing biometrics, fall detection, movement, and medication reminders.
         </Text>
@@ -496,11 +830,33 @@ function DevicesView() {
 }
 
 export default function App() {
+  const [appData, setAppData] = useState<AppData>(defaultAppData);
   const [activeTab, setActiveTab] = useState<TabKey>("care");
-  const [selectedDay, setSelectedDay] = useState<MedicationDay>(medicationWeek[2]);
+  const [selectedDay, setSelectedDay] = useState<MedicationDay>(defaultAppData.medicationWeek[2]);
   const [administeredDays, setAdministeredDays] = useState<Record<number, boolean>>(() =>
-    Object.fromEntries(medicationWeek.map((day) => [day.key, day.administered])),
+    Object.fromEntries(defaultAppData.medicationWeek.map((day) => [day.key, day.administered])),
   );
+
+  useEffect(() => {
+    let ignore = false;
+
+    loadSabawoonData()
+      .then((data) => {
+        if (ignore) return;
+        setAppData(data);
+        setSelectedDay(data.medicationWeek[2] ?? data.medicationWeek[0]);
+        setAdministeredDays(
+          Object.fromEntries(data.medicationWeek.map((day) => [day.key, day.administered])),
+        );
+      })
+      .catch(() => {
+        if (!ignore) setAppData(defaultAppData);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const title = useMemo(() => {
     if (activeTab === "care") return "Care overview";
@@ -537,9 +893,12 @@ export default function App() {
             <Text style={styles.screenTitle}>{title}</Text>
           </View>
 
-          {activeTab === "care" ? <CareView /> : null}
+          {activeTab === "care" ? (
+            <CareView elder={appData.elder} heartSamples={appData.heartSamples} />
+          ) : null}
           {activeTab === "medication" ? (
             <MedicationView
+              medicationWeek={appData.medicationWeek}
               selectedDay={selectedDay}
               administeredDays={administeredDays}
               onSelectDay={setSelectedDay}
@@ -551,8 +910,10 @@ export default function App() {
               }
             />
           ) : null}
-          {activeTab === "alerts" ? <AlertsView /> : null}
-          {activeTab === "devices" ? <DevicesView /> : null}
+          {activeTab === "alerts" ? <AlertsView alerts={appData.alerts} /> : null}
+          {activeTab === "devices" ? (
+            <DevicesView elder={appData.elder} deviceMetrics={appData.deviceMetrics} />
+          ) : null}
         </ScrollView>
 
         <View style={styles.tabBar}>
@@ -954,11 +1315,40 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "900",
   },
-  doseAmount: {
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: "800",
+  doseDescription: {
+    color: colors.textSoft,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
     marginTop: 10,
+  },
+  doseMetaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  doseMetaPill: {
+    backgroundColor: colors.surface,
+    borderColor: colors.taupe,
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    minWidth: "46%",
+    padding: 10,
+  },
+  doseMetaLabel: {
+    color: colors.textSoft,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+  },
+  doseMetaValue: {
+    color: colors.ink,
+    fontSize: 14,
+    fontWeight: "900",
+    marginTop: 4,
   },
   doseInstructions: {
     color: colors.textSoft,
