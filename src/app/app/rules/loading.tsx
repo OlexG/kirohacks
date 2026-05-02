@@ -2,11 +2,9 @@ import Link from "next/link";
 
 const navItems = [
   { label: "Dashboard", href: "/app" },
-  { label: "Roster", href: "/app" },
-  { label: "Alerts", href: "/app" },
+  { label: "Roster", href: "/app?view=roster" },
+  { label: "Alerts", href: "/app?view=alerts" },
   { label: "Rules", href: "/app/rules", active: true },
-  { label: "Care Teams", href: "/app" },
-  { label: "Reports", href: "/app" },
 ];
 
 function SkeletonLine({ className = "" }: Readonly<{ className?: string }>) {
@@ -49,22 +47,6 @@ export default function RulesLoading() {
 
         <section className="care-main rules-main" aria-label="Rules loading">
           <div className="rules-workspace rules-skeleton" aria-busy="true" aria-label="Loading rules">
-            <section className="rules-hero">
-              <div>
-                <SkeletonLine className="w-12" />
-                <SkeletonLine className="w-44 tall" />
-                <SkeletonLine className="w-80" />
-              </div>
-              <div className="rules-stats">
-                {[0, 1, 2].map((item) => (
-                  <div key={item}>
-                    <SkeletonLine className="w-8 tall centered" />
-                    <SkeletonLine className="w-12 centered" />
-                  </div>
-                ))}
-              </div>
-            </section>
-
             <section className="rule-builder">
               <div className="rule-builder-preview">
                 <div className="person-chip-large skeleton-dark">
@@ -125,17 +107,6 @@ export default function RulesLoading() {
                   ))}
                 </div>
               </div>
-
-              <aside className="watch-signal-panel">
-                <SkeletonLine className="w-36 tall" />
-                {[0, 1, 2].map((item) => (
-                  <div className="signal-note" key={item}>
-                    <SkeletonLine className="w-20" />
-                    <SkeletonLine className="w-full" />
-                    <SkeletonLine className="w-3-4" />
-                  </div>
-                ))}
-              </aside>
             </section>
           </div>
         </section>

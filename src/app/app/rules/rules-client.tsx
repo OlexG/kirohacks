@@ -87,36 +87,8 @@ export function RulesWorkspace({
     [signalKey],
   );
 
-  const activeCount = rules.filter((rule) => rule.active).length;
-  const urgentCount = rules.filter((rule) => rule.severity === "urgent" && rule.active).length;
-
   return (
     <div className="rules-workspace">
-      <section className="rules-hero" aria-label="Rules overview">
-        <div>
-          <p className="rules-kicker">Rules</p>
-          <h1>Safety rules</h1>
-          <p>
-            Create per-person Apple Watch and HealthKit thresholds. Active rules are loaded from
-            Supabase.
-          </p>
-        </div>
-        <div className="rules-stats" aria-label="Rules status">
-          <div>
-            <strong>{activeCount}</strong>
-            <span>Active</span>
-          </div>
-          <div>
-            <strong>{urgentCount}</strong>
-            <span>Urgent</span>
-          </div>
-          <div>
-            <strong>{RULE_SIGNALS.length}</strong>
-            <span>Signals</span>
-          </div>
-        </div>
-      </section>
-
       <section className="rule-builder" aria-label="Create a monitoring rule">
         <div className="rule-builder-preview">
           <div className="person-chip-large">
@@ -301,22 +273,6 @@ export function RulesWorkspace({
             ))}
           </div>
         </div>
-
-        <aside className="watch-signal-panel" aria-label="Apple Watch signal notes">
-          <h2>Basic Apple Watch scope</h2>
-          <div className="signal-note reliable">
-            <strong>Do first</strong>
-            <span>Falls, heart rate, resting heart rate, walking heart rate, and watch sync state.</span>
-          </div>
-          <div className="signal-note">
-            <strong>Useful next</strong>
-            <span>Steps and inactivity derived from activity samples and recent sync timestamps.</span>
-          </div>
-          <div className="signal-note imported">
-            <strong>Imported only</strong>
-            <span>Blood pressure belongs in HealthKit, but it requires a connected cuff or another source.</span>
-          </div>
-        </aside>
       </section>
     </div>
   );

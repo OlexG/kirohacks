@@ -12,11 +12,9 @@ export const metadata: Metadata = {
 
 const navItems = [
   { label: "Dashboard", href: "/app" },
-  { label: "Roster", href: "/app" },
-  { label: "Alerts", href: "/app" },
+  { label: "Roster", href: "/app?view=roster" },
+  { label: "Alerts", href: "/app?view=alerts" },
   { label: "Rules", href: "/app/rules", active: true },
-  { label: "Care Teams", href: "/app" },
-  { label: "Reports", href: "/app" },
 ];
 
 export default async function RulesPage() {
