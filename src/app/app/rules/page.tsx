@@ -55,7 +55,22 @@ export default async function RulesPage() {
         </aside>
 
         <section className="care-main rules-main" aria-label="Rules workspace">
-          <RulesWorkspace people={people} rules={rules} />
+          <div className="care-board rules-board">
+            <header className="care-board-header">
+              <div>
+                <p className="care-board-eyebrow">Care operations</p>
+                <h1>Rules</h1>
+              </div>
+              <div className="care-board-status" aria-label="Rules data source">
+                <span aria-hidden="true" />
+                <div>
+                  <strong>Live monitoring</strong>
+                  <small>Rules backed by Supabase</small>
+                </div>
+              </div>
+            </header>
+            <RulesWorkspace people={people} rules={rules} />
+          </div>
         </section>
       </div>
     </main>

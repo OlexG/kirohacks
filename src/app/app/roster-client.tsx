@@ -369,34 +369,37 @@ function DashboardOverview({ alerts, groups }: Readonly<{ alerts: RosterAlert[];
 }
 
 function PersonCard({ person }: Readonly<{ person: RosterPerson }>) {
+  const watchLabel =
+    person.watch_battery_percent === null ? "Watch offline" : `${person.watch_battery_percent}% watch`;
+  const signalLabel =
+    person.alert === "urgent" ? "!" : person.alert === "warning" ? "~" : person.alert === "offline" ? "--" : "";
+
   return (
     <Link className={`care-person-card ${person.alert}`} href={`/app/people/${person.id}`}>
-      <div className="care-person-top">
-        <div className="care-photo">
-          <Image
-            alt={`${person.name} portrait`}
-            className="care-photo-image"
-            height={64}
-            src={person.photo}
-            unoptimized={!person.hasPhoto}
-            width={64}
-          />
-          {!person.hasPhoto ? <span className="care-photo-initials">{person.initials}</span> : null}
-        </div>
-        <div className="care-person-id">
-          <h3>{person.name}</h3>
-          <p>
-            <span>Age {person.age}</span>
-            <span className="care-person-status">{person.status}</span>
-          </p>
-        </div>
+      <div className="care-photo">
+        <Image
+          alt={`${person.name} portrait`}
+          className="care-photo-image"
+          height={40}
+          src={person.photo}
+          unoptimized={!person.hasPhoto}
+          width={40}
+        />
+        {!person.hasPhoto ? <span className="care-photo-initials">{person.initials}</span> : null}
       </div>
 
-      {person.activeAlert ? (
-        <div className="care-person-alert">
-          <span>{person.activeAlert.severity}</span>
-          <strong>{person.activeAlert.title}</strong>
-        </div>
+      <div className="care-person-id">
+        <h3>{person.name}</h3>
+        <p>
+          <span>{person.age} yrs</span>
+          <span className="care-person-status">{watchLabel}</span>
+        </p>
+      </div>
+
+      {signalLabel ? (
+        <span aria-hidden="true" className={`care-person-signal ${person.alert}`}>
+          {signalLabel}
+        </span>
       ) : null}
     </Link>
   );
@@ -546,7 +549,6 @@ function RosterColumns({ groups }: Readonly<{ groups: RosterGroup[] }>) {
                 <PersonCard key={person.id} person={person} />
               ))}
             </div>
-            <div className="care-column-footer">{group.footer}</div>
           </div>
         </section>
       ))}

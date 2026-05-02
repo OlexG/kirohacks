@@ -1,15 +1,9 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
 import type { CarePerson } from "@/lib/care-people";
 import type { CareRule } from "@/lib/care-rules";
-import { RULE_SIGNALS, type RuleOperator } from "@/lib/rules-options";
-import { createRuleAction, toggleRuleAction, type RuleActionState } from "./actions";
-
-const initialActionState: RuleActionState = {
-  ok: false,
-  message: "",
-};
+import type { RuleOperator } from "@/lib/rules-options";
+import { toggleRuleAction } from "./actions";
 
 const operatorLabels: Record<RuleOperator, string> = {
   above: "Above",
@@ -69,164 +63,10 @@ function formatRule(rule: CareRule) {
 }
 
 export function RulesWorkspace({
-  people,
   rules,
 }: Readonly<{ people: CarePerson[]; rules: CareRule[] }>) {
-  const [state, formAction, isPending] = useActionState(createRuleAction, initialActionState);
-  const [personId, setPersonId] = useState(people[0]?.id ?? "");
-  const [signalKey, setSignalKey] = useState(RULE_SIGNALS[0].key);
-  const [operator, setOperator] = useState<RuleOperator>(RULE_SIGNALS[0].defaultOperator);
-  const [threshold, setThreshold] = useState("");
-
-  const selectedPerson = useMemo(
-    () => people.find((person) => person.id === personId) ?? people[0] ?? null,
-    [people, personId],
-  );
-  const selectedSignal = useMemo(
-    () => RULE_SIGNALS.find((signal) => signal.key === signalKey) ?? RULE_SIGNALS[0],
-    [signalKey],
-  );
-
   return (
     <div className="rules-workspace">
-      <section className="rule-builder" aria-label="Create a monitoring rule">
-        <div className="rule-builder-preview">
-          <div className="person-chip-large">
-            <span>{selectedPerson?.initials ?? "--"}</span>
-            {selectedPerson ? (
-              <div>
-                <strong>{selectedPerson.name}</strong>
-                <small>
-                  {selectedPerson.age} yr · {selectedPerson.context}
-                </small>
-              </div>
-            ) : (
-              <div>
-                <strong>No people yet</strong>
-                <small>Add people to Supabase before creating rules.</small>
-              </div>
-            )}
-          </div>
-          <div className={`signal-card ${selectedSignal.reliability}`}>
-            <div>
-              <RuleIcon type={selectedSignal.key} />
-              <span>{selectedSignal.source}</span>
-            </div>
-            <h2>{selectedSignal.label}</h2>
-            <p>{selectedSignal.detail}</p>
-          </div>
-        </div>
-
-        <form action={formAction} className="rule-form">
-          <div className="rules-form-grid">
-            <label>
-              Person
-              <select name="person_id" value={personId} onChange={(event) => setPersonId(event.target.value)}>
-                {people.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Signal
-              <select
-                name="signal_key"
-                value={signalKey}
-                onChange={(event) => {
-                  const nextSignal = RULE_SIGNALS.find((signal) => signal.key === event.target.value);
-                  if (!nextSignal) {
-                    return;
-                  }
-                  setSignalKey(nextSignal.key);
-                  setOperator(nextSignal.defaultOperator);
-                  setThreshold(nextSignal.defaultThreshold?.toString() ?? "");
-                }}
-              >
-                {RULE_SIGNALS.map((signal) => (
-                  <option key={signal.key} value={signal.key}>
-                    {signal.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Compare
-              <select
-                name="operator"
-                value={operator}
-                onChange={(event) => setOperator(event.target.value as RuleOperator)}
-              >
-                {selectedSignal.operators.map((signalOperator) => (
-                  <option key={signalOperator} value={signalOperator}>
-                    {operatorLabels[signalOperator]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              {selectedSignal.thresholdLabel}
-              <div className="threshold-field">
-                <input
-                  disabled={!selectedSignal.requiresThreshold}
-                  inputMode="decimal"
-                  name="threshold"
-                  onChange={(event) => setThreshold(event.target.value)}
-                  placeholder={selectedSignal.requiresThreshold ? "Enter value" : "Automatic"}
-                  required={selectedSignal.requiresThreshold}
-                  type="number"
-                  value={threshold}
-                />
-                {selectedSignal.unit ? <span>{selectedSignal.unit}</span> : null}
-              </div>
-            </label>
-
-            <label>
-              Alert level
-              <select name="severity" defaultValue="review">
-                <option value="info">Info</option>
-                <option value="review">Review</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </label>
-
-            <label>
-              Notify
-              <select name="notification_channel" defaultValue="care_team">
-                <option value="care_team">Care team</option>
-                <option value="primary_caregiver">Primary caregiver</option>
-                <option value="emergency_contact">Emergency contact</option>
-              </select>
-            </label>
-          </div>
-
-          <label className="notes-field">
-            Notes
-            <textarea
-              name="notes"
-              placeholder="Add context for caretakers reviewing this alert."
-              rows={3}
-            />
-          </label>
-
-          <div className="rule-form-footer">
-            <p className={state.message ? (state.ok ? "success" : "error") : undefined}>
-              {state.message || "Saved to the care_rules table."}
-            </p>
-            <button className="icon-button-primary" disabled={isPending || people.length === 0} type="submit">
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" fill="currentColor" />
-              </svg>
-              {isPending ? "Adding" : "Add rule"}
-            </button>
-          </div>
-        </form>
-      </section>
-
       <section className="rules-content-grid">
         <div className="rules-table-panel">
           <div className="panel-heading">

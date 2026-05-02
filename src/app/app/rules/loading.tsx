@@ -46,68 +46,50 @@ export default function RulesLoading() {
         </aside>
 
         <section className="care-main rules-main" aria-label="Rules loading">
-          <div className="rules-workspace rules-skeleton" aria-busy="true" aria-label="Loading rules">
-            <section className="rule-builder">
-              <div className="rule-builder-preview">
-                <div className="person-chip-large skeleton-dark">
-                  <SkeletonLine className="avatar" />
-                  <div>
-                    <SkeletonLine className="w-28" />
-                    <SkeletonLine className="w-44" />
-                  </div>
-                </div>
-                <div className="signal-card">
+          <div className="care-board rules-board">
+            <header className="care-board-header">
+              <div>
+                <SkeletonLine className="w-32" />
+                <SkeletonLine className="w-20 tall" />
+              </div>
+              <div className="care-board-status" aria-label="Loading rules data source">
+                <SkeletonLine className="avatar tiny" />
+                <div>
+                  <SkeletonLine className="w-28" />
                   <SkeletonLine className="w-40" />
-                  <SkeletonLine className="w-36 tall" />
-                  <SkeletonLine className="w-full" />
-                  <SkeletonLine className="w-3-4" />
                 </div>
               </div>
+            </header>
 
-              <div className="rule-form">
-                <div className="rules-form-grid">
-                  {[0, 1, 2, 3, 4, 5].map((item) => (
-                    <div className="skeleton-field" key={item}>
-                      <SkeletonLine className="w-16" />
-                      <SkeletonLine className="field" />
+            <div className="rules-workspace rules-skeleton" aria-busy="true" aria-label="Loading rules">
+              <section className="rules-content-grid">
+                <div className="rules-table-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <SkeletonLine className="w-28 tall" />
+                      <SkeletonLine className="w-40" />
                     </div>
-                  ))}
-                </div>
-                <SkeletonLine className="textarea" />
-                <div className="rule-form-footer">
-                  <SkeletonLine className="w-44" />
-                  <SkeletonLine className="button" />
-                </div>
-              </div>
-            </section>
-
-            <section className="rules-content-grid">
-              <div className="rules-table-panel">
-                <div className="panel-heading">
-                  <div>
-                    <SkeletonLine className="w-28 tall" />
-                    <SkeletonLine className="w-40" />
+                  </div>
+                  <div className="rules-list">
+                    {[0, 1, 2, 3, 4].map((item) => (
+                      <article className="stored-rule skeleton-rule" key={item}>
+                        <SkeletonLine className="avatar square" />
+                        <div>
+                          <SkeletonLine className="w-32" />
+                          <SkeletonLine className="w-56" />
+                          <div className="stored-rule-meta">
+                            <SkeletonLine className="pill" />
+                            <SkeletonLine className="pill small" />
+                            <SkeletonLine className="pill note" />
+                          </div>
+                        </div>
+                        <SkeletonLine className="avatar square" />
+                      </article>
+                    ))}
                   </div>
                 </div>
-                <div className="rules-list">
-                  {[0, 1, 2, 3, 4].map((item) => (
-                    <article className="stored-rule skeleton-rule" key={item}>
-                      <SkeletonLine className="avatar square" />
-                      <div>
-                        <SkeletonLine className="w-32" />
-                        <SkeletonLine className="w-56" />
-                        <div className="stored-rule-meta">
-                          <SkeletonLine className="pill" />
-                          <SkeletonLine className="pill small" />
-                          <SkeletonLine className="pill note" />
-                        </div>
-                      </div>
-                      <SkeletonLine className="avatar square" />
-                    </article>
-                  ))}
-                </div>
-              </div>
-            </section>
+              </section>
+            </div>
           </div>
         </section>
       </div>
