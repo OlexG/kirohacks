@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { SABAWOON_HAKIMI_PERSON_ID } from "@/lib/biometrics-data";
 import { listActiveCareAlertsForPerson } from "@/lib/care-alerts";
 import { buildHrSamples } from "@/lib/care-demo-metrics";
 import { formatWatchBattery, getCarePerson } from "@/lib/care-people";
@@ -21,7 +22,7 @@ import {
 } from "@/lib/medications";
 import { AppSidebar } from "../../sidebar";
 import { resolvePersonPhoto } from "@/lib/care-person-image";
-import { LiveDataRefresh } from "../../live-data-refresh";
+import { LiveDataRefresh, LiveMetricValue } from "../../live-data-refresh";
 import { MedicationReminderButton } from "./medication-reminder-button";
 
 type PersonPageProps = {
@@ -188,6 +189,20 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
     null;
   const cadence =
     latestNumber(fallRiskObservations, (observation) => observation.cadence_spm)?.cadence_spm ?? null;
+  const latestObservation = fallRiskObservations[0] ?? null;
+  const isLiveProfile = person.id === SABAWOON_HAKIMI_PERSON_ID;
+  const profileDataLabel = isLiveProfile
+    ? person.fall_risk_updated_at
+      ? "Live from webhook"
+      : "Awaiting webhook"
+    : "Non live profile";
+  const latestFallRiskSignature = [
+    person.fall_risk_updated_at ?? "pending",
+    latestObservation?.id ?? "no-observation",
+    latestObservation?.message_type ?? "none",
+    ruleRiskScore ?? "no-risk",
+    person.heart_rate_bpm ?? "no-hr",
+  ].join(":");
   const riskChart = chartPoints(fallRiskObservations, (observation) => observation.rule_risk_score_100);
   const instabilityChart = chartPoints(
     fallRiskObservations,
@@ -198,7 +213,6 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
 
   return (
     <main className="care-app-page">
-      <LiveDataRefresh />
       <div className="care-app-shell">
         <AppSidebar activePage="profile" />
 
@@ -227,10 +241,18 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                   Back to workspace
                 </Link>
                 <div className="person-room-status" aria-label="Profile status">
+                  {!isLiveProfile ? <span className="non-live-profile-pill">Non live profile</span> : null}
                   <span>{alerts.length === 0 ? "No active alerts" : `${alerts.length} active alerts`}</span>
                   <span>{formatWatchBattery(person.watch_battery_percent)} watch</span>
                   <span>{person.last_seen_label}</span>
                 </div>
+                <LiveDataRefresh
+                  intervalMs={3500}
+                  statusText="Watch is connected"
+                  updatedAt={person.fall_risk_updated_at ?? latestObservation?.generated_at}
+                  variant="profile"
+                  watchedKey={latestFallRiskSignature}
+                />
               </div>
 
               <div className="person-room-stage">
@@ -246,7 +268,9 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                       priority
                       unoptimized
                     />
-                    <p className="person-focus-kicker">Senior profile</p>
+                    <p className="person-focus-kicker">
+                      {isLiveProfile ? "Senior profile" : "Senior profile · Non live profile"}
+                    </p>
                     <h2>{person.name}</h2>
                     <p className="person-focus-subtitle">Age {person.age} · Home · {person.status}</p>
                     <p className="person-focus-summary">{person.context || person.status}</p>
@@ -254,11 +278,15 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                     <div className="person-focus-metrics" aria-label="Primary metrics">
                       <div>
                         <span>Heart rate</span>
-                        <strong>{person.heart_rate_bpm ?? "--"} bpm</strong>
+                        <LiveMetricValue compareKey={person.heart_rate_bpm ?? "none"}>
+                          {person.heart_rate_bpm ?? "--"} bpm
+                        </LiveMetricValue>
                       </div>
                       <div>
                         <span>Rule risk</span>
-                        <strong>{formatRiskScore(ruleRiskScore)}</strong>
+                        <LiveMetricValue compareKey={ruleRiskScore ?? "none"}>
+                          {formatRiskScore(ruleRiskScore)}
+                        </LiveMetricValue>
                       </div>
                       <div>
                         <span>Next med</span>
@@ -272,7 +300,9 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                   <header>
                     <div>
                       <p className="care-detail-kicker">Rule Risk</p>
-                      <strong>{formatRiskScore(ruleRiskScore)}</strong>
+                      <LiveMetricValue compareKey={ruleRiskScore ?? "none"}>
+                        {formatRiskScore(ruleRiskScore)}
+                      </LiveMetricValue>
                       <span>{formatClass(ruleRiskLevel)}</span>
                     </div>
                     <div className="person-live-pill">
@@ -285,19 +315,25 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
 
                 <section className="person-orbit-card person-orbit-watch" aria-label="Experimental ML score">
                   <span>Experimental ML</span>
-                  <strong>{formatMlScore(mlScore)}</strong>
+                  <LiveMetricValue compareKey={mlScore ?? "none"}>{formatMlScore(mlScore)}</LiveMetricValue>
                   <p>{person.fall_ml_model_version ?? "Non-clinical estimate"}</p>
                 </section>
 
                 <section className="person-orbit-card person-orbit-motion" aria-label="Walking steadiness">
                   <span>Walking steadiness</span>
-                  <strong>{formatClass(steadinessClass)}</strong>
+                  <LiveMetricValue compareKey={steadinessClass ?? "none"}>
+                    {formatClass(steadinessClass)}
+                  </LiveMetricValue>
                   <p>{mobilitySpeed === null ? "Speed pending" : `${mobilitySpeed.toFixed(2)} m/s`}</p>
                 </section>
 
                 <section className="person-orbit-card person-orbit-rest" aria-label="Recent instability">
                   <span>Recent instability</span>
-                  <strong>{instabilityScore === null ? recentInstabilityEvents.length : formatRiskScore(instabilityScore)}</strong>
+                  <LiveMetricValue
+                    compareKey={`${instabilityScore ?? "none"}:${recentInstabilityEvents.length}`}
+                  >
+                    {instabilityScore === null ? recentInstabilityEvents.length : formatRiskScore(instabilityScore)}
+                  </LiveMetricValue>
                   <p>
                     {recentInstabilityEvents.length} events · {highInstabilityEvents.length} high
                   </p>
@@ -311,38 +347,48 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                       <p className="care-detail-kicker">Profile</p>
                       <h2>Fall-risk profile</h2>
                     </div>
-                    <span>{person.fall_risk_updated_at ? "Live from webhook" : "Awaiting webhook"}</span>
+                    <span className={!isLiveProfile ? "non-live-profile-pill" : undefined}>
+                      {profileDataLabel}
+                    </span>
                   </header>
                   <div className="person-profile-data-grid">
                     <div>
                       <span>Sex</span>
-                      <strong>{formatClass(person.sex)}</strong>
+                      <LiveMetricValue compareKey={person.sex ?? "none"}>{formatClass(person.sex)}</LiveMetricValue>
                     </div>
                     <div>
                       <span>Height</span>
-                      <strong>{person.height_cm === null ? "--" : `${Number(person.height_cm).toFixed(0)} cm`}</strong>
+                      <LiveMetricValue compareKey={person.height_cm ?? "none"}>
+                        {person.height_cm === null ? "--" : `${Number(person.height_cm).toFixed(0)} cm`}
+                      </LiveMetricValue>
                     </div>
                     <div>
                       <span>Assistive device</span>
-                      <strong>{formatClass(person.assistive_device)}</strong>
+                      <LiveMetricValue compareKey={person.assistive_device ?? "none"}>
+                        {formatClass(person.assistive_device)}
+                      </LiveMetricValue>
                     </div>
                     <div>
                       <span>Prior falls</span>
-                      <strong>{formatNullable(person.prior_falls_12mo)}</strong>
+                      <LiveMetricValue compareKey={person.prior_falls_12mo ?? "none"}>
+                        {formatNullable(person.prior_falls_12mo)}
+                      </LiveMetricValue>
                     </div>
                     <div>
                       <span>Injurious fall</span>
-                      <strong>{person.injurious_fall_12mo === null ? "--" : person.injurious_fall_12mo ? "Yes" : "No"}</strong>
+                      <LiveMetricValue compareKey={String(person.injurious_fall_12mo)}>
+                        {person.injurious_fall_12mo === null ? "--" : person.injurious_fall_12mo ? "Yes" : "No"}
+                      </LiveMetricValue>
                     </div>
                     <div>
                       <span>Unable to rise</span>
-                      <strong>
+                      <LiveMetricValue compareKey={String(person.unable_to_rise_after_fall_12mo)}>
                         {person.unable_to_rise_after_fall_12mo === null
                           ? "--"
                           : person.unable_to_rise_after_fall_12mo
                             ? "Yes"
                             : "No"}
-                      </strong>
+                      </LiveMetricValue>
                     </div>
                   </div>
                   <div className="person-tags">
