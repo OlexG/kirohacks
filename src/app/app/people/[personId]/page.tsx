@@ -21,6 +21,7 @@ import {
 } from "@/lib/medications";
 import { AppSidebar } from "../../sidebar";
 import { resolvePersonPhoto } from "@/lib/care-person-image";
+import { LiveDataRefresh } from "../../live-data-refresh";
 import { MedicationReminderButton } from "./medication-reminder-button";
 
 type PersonPageProps = {
@@ -197,6 +198,7 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
 
   return (
     <main className="care-app-page">
+      <LiveDataRefresh />
       <div className="care-app-shell">
         <AppSidebar activePage="profile" />
 

@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { recordSabawoonWatchAlert } from "@/lib/biometrics-data";
 import {
   FallRiskEnvelopeError,
@@ -25,6 +26,11 @@ export async function POST(request: Request) {
     const data = isFallRiskEnvelope(payloadObject)
       ? await recordSabawoonFallRiskEnvelope(payloadObject)
       : await recordSabawoonWatchAlert(payloadObject);
+
+    revalidatePath("/app/dashboard");
+    revalidatePath("/app/roster");
+    revalidatePath("/app/alerts");
+    revalidatePath(`/app/people/${data.person_id}`);
 
     return Response.json({ ok: true, data }, { status: 201 });
   } catch (error) {

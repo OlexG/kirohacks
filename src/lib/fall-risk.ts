@@ -145,10 +145,6 @@ function integerOrNull(value: number | null) {
   return value === null ? null : Math.round(value);
 }
 
-function percentScore(value: number | null) {
-  return value === null ? null : Math.round(value * 100);
-}
-
 function clampScore100(value: number | null) {
   if (value === null) {
     return null;
@@ -316,7 +312,12 @@ function buildObservationInsert(envelope: ReturnType<typeof parseEnvelope>) {
     walking_step_length_m: numberAt(mobility, "walkingStepLengthM"),
     walking_asymmetry_pct: numberAt(mobility, "walkingAsymmetryPct"),
     walking_double_support_pct: numberAt(mobility, "walkingDoubleSupportPct"),
-    heart_rate_bpm: integerOrNull(numberAt(cardio, "hrMeanBpm") ?? numberAt(cardio, "walkingHrAvgBpm")),
+    heart_rate_bpm: integerOrNull(
+      numberAt(cardio, "hrMeanBpm") ??
+        numberAt(cardio, "walkingHrAvgBpm") ??
+        numberAt(cardio, "restingHrBpm") ??
+        numberAt(cardio, "hrMaxBpm"),
+    ),
     cadence_spm: numberAt(gait, "cadenceSpm") ?? numberAt(payload, "avgCadenceSpm"),
     cadence_cv_pct: numberAt(gait, "cadenceCvPct"),
     stride_time_cv_pct: numberAt(gait, "strideTimeCvPct"),
