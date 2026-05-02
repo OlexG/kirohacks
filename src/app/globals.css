@@ -5918,20 +5918,6 @@ button.care-sidebar-link {
   position: relative;
 }
 
-.profile-live-console::before {
-  background: linear-gradient(90deg, rgba(79, 127, 99, 0), rgba(79, 127, 99, 0.18), rgba(79, 127, 99, 0));
-  content: "";
-  inset: 0;
-  opacity: 0;
-  pointer-events: none;
-  position: absolute;
-  transform: translateX(-100%);
-}
-
-.profile-live-console.updated::before {
-  animation: profile-live-sweep 1200ms ease;
-}
-
 .profile-live-console-top,
 .profile-live-console-bottom {
   align-items: center;
@@ -6008,25 +5994,6 @@ button.care-sidebar-link {
   width: 10px;
 }
 
-.profile-live-orb::after {
-  border: 1px solid rgba(79, 127, 99, 0.42);
-  border-radius: 999px;
-  content: "";
-  inset: -7px;
-  opacity: 0;
-  pointer-events: none;
-  position: absolute;
-  transform: scale(0.72);
-}
-
-.profile-live-console.pulse .profile-live-orb::after {
-  animation: profile-live-ring 1100ms ease-out;
-}
-
-.profile-live-console.updated .profile-live-orb::after {
-  animation: profile-live-ring-strong 1400ms ease-out;
-}
-
 .profile-live-console.refreshing .profile-live-orb {
   background: #c4812b;
   box-shadow: 0 0 0 5px rgba(196, 129, 43, 0.13);
@@ -6055,7 +6022,7 @@ button.care-sidebar-link {
   flex: 0 0 auto;
   gap: 14px;
   grid-template-areas:
-    "heart focus watch"
+    "heart focus rest"
     "motion focus rest";
   grid-template-columns: minmax(190px, 0.74fr) minmax(420px, 1.55fr) minmax(190px, 0.74fr);
   grid-template-rows: repeat(2, minmax(230px, 1fr));
@@ -6065,22 +6032,12 @@ button.care-sidebar-link {
 }
 
 .person-focus-card {
-  --person-glow: rgba(21, 128, 61, 0.16);
   display: flex;
   grid-area: focus;
   max-width: none;
   position: relative;
   width: 100%;
   z-index: 4;
-}
-
-.person-focus-pulse {
-  animation: room-pulse 3.8s ease-in-out infinite;
-  border: 3px solid var(--person-glow);
-  border-radius: 18px;
-  inset: -10px;
-  pointer-events: none;
-  position: absolute;
 }
 
 .person-focus-content {
@@ -6153,18 +6110,19 @@ button.care-sidebar-link {
 }
 
 .person-focus-metrics {
-  background: rgba(90, 86, 75, 0.08);
+  background: transparent;
   border-radius: 8px;
   display: grid;
-  gap: 1px;
+  gap: 8px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 26px;
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
 }
 
 .person-focus-metrics div {
   background: #faf7f2;
+  border-radius: 8px;
   min-width: 0;
   padding: 14px 12px;
 }
@@ -6234,11 +6192,6 @@ button.care-sidebar-link {
   left: 7%;
   top: 15%;
   width: 270px;
-}
-
-.person-orbit-watch {
-  right: 9%;
-  top: 18%;
 }
 
 .person-orbit-motion {
@@ -6335,7 +6288,6 @@ button.care-sidebar-link {
   }
 
   .person-orbit-heart,
-  .person-orbit-watch,
   .person-orbit-motion,
   .person-orbit-rest {
     bottom: auto;
@@ -8864,56 +8816,23 @@ button.care-sidebar-link {
   }
 }
 
-@keyframes profile-live-sweep {
-  0% {
-    opacity: 0;
-    transform: translateX(-100%);
-  }
-  24% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-}
-
-@keyframes profile-live-ring {
-  0% {
-    opacity: 0;
-    transform: scale(0.72);
-  }
-  18% {
-    opacity: 0.72;
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.8);
-  }
-}
-
-@keyframes profile-live-ring-strong {
-  0% {
-    border-color: rgba(79, 127, 99, 0.52);
-    opacity: 0;
-    transform: scale(0.72);
-  }
-  16% {
-    opacity: 0.86;
-  }
-  100% {
-    border-color: rgba(79, 127, 99, 0);
-    opacity: 0;
-    transform: scale(2.12);
-  }
-}
-
 @keyframes live-field-idle-pulse {
   0%, 100% {
-    border-color: var(--care-border-soft);
+    background-color: var(--live-field-pulse-bg-rest, rgba(79, 127, 99, 0));
+    opacity: 0.18;
   }
   50% {
-    border-color: rgba(79, 127, 99, 0.42);
+    background-color: var(--live-field-pulse-bg-peak, rgba(79, 127, 99, 0.08));
+    opacity: 1;
+  }
+}
+
+@keyframes profile-chart-redraw {
+  0% {
+    stroke-dashoffset: 260;
+  }
+  100% {
+    stroke-dashoffset: 0;
   }
 }
 
@@ -9751,7 +9670,7 @@ button.care-sidebar-link {
   flex: 0 0 auto;
   gap: 14px;
   grid-template-areas:
-    "heart focus watch"
+    "heart focus rest"
     "motion focus rest";
   grid-template-columns: minmax(190px, 0.74fr) minmax(420px, 1.55fr) minmax(190px, 0.74fr);
   grid-template-rows: repeat(2, minmax(190px, 1fr));
@@ -9761,22 +9680,12 @@ button.care-sidebar-link {
 }
 
 .person-focus-card {
-  --person-glow: rgba(21, 128, 61, 0.16);
   display: flex;
   grid-area: focus;
   max-width: none;
   position: relative;
   width: 100%;
   z-index: 4;
-}
-
-.person-focus-pulse {
-  animation: room-pulse 3.8s ease-in-out infinite;
-  border: 3px solid var(--person-glow);
-  border-radius: 18px;
-  inset: -10px;
-  pointer-events: none;
-  position: absolute;
 }
 
 .person-focus-content {
@@ -9851,18 +9760,19 @@ button.care-sidebar-link {
 }
 
 .person-focus-metrics {
-  background: rgba(90, 86, 75, 0.08);
+  background: transparent;
   border-radius: 8px;
   display: grid;
-  gap: 1px;
+  gap: 8px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 26px;
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
 }
 
 .person-focus-metrics div {
   background: #faf7f2;
+  border-radius: 8px;
   min-width: 0;
   padding: 14px 12px;
 }
@@ -9937,10 +9847,6 @@ button.care-sidebar-link {
   width: auto;
 }
 
-.person-orbit-watch {
-  grid-area: watch;
-}
-
 .person-orbit-motion {
   grid-area: motion;
 }
@@ -10010,8 +9916,8 @@ button.care-sidebar-link {
     gap: 10px;
     grid-template-areas:
       "focus focus"
-      "heart watch"
-      "motion rest";
+      "heart motion"
+      "rest rest";
     grid-template-columns: repeat(2, minmax(0, 1fr));
     min-height: 0;
     overflow: visible;
@@ -10028,7 +9934,6 @@ button.care-sidebar-link {
   }
 
   .person-orbit-heart,
-  .person-orbit-watch,
   .person-orbit-motion,
   .person-orbit-rest {
     bottom: auto;
@@ -10068,7 +9973,6 @@ button.care-sidebar-link {
     grid-template-areas:
       "focus"
       "heart"
-      "watch"
       "motion"
       "rest";
   }
@@ -10123,15 +10027,9 @@ button.care-sidebar-link {
   margin-top: 14px;
 }
 
-.person-orbit-watch {
-  grid-column: 3;
-  grid-row: 1;
-}
-
 .person-orbit-rest {
   grid-column: 3;
-  grid-row: 2;
-  margin-top: 14px;
+  grid-row: 1 / span 2;
 }
 
 @media (max-width: 1180px) {
@@ -10143,7 +10041,6 @@ button.care-sidebar-link {
   .person-focus-card,
   .person-orbit-heart,
   .person-orbit-motion,
-  .person-orbit-watch,
   .person-orbit-rest {
     grid-column: auto;
     grid-row: auto;
@@ -10161,9 +10058,9 @@ button.care-sidebar-link {
   flex: 0 0 auto;
   gap: 12px;
   grid-template-areas:
-    "focus focus focus focus"
-    "heart watch motion rest";
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+    "focus focus focus"
+    "heart motion rest";
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: minmax(360px, auto) minmax(150px, auto);
   min-height: 0;
   overflow: visible;
@@ -10179,10 +10076,6 @@ button.care-sidebar-link {
   overflow: hidden;
   position: relative;
   z-index: auto;
-}
-
-.person-focus-pulse {
-  display: none;
 }
 
 .person-focus-card {
@@ -10244,10 +10137,6 @@ button.care-sidebar-link {
   margin: 0;
 }
 
-.person-orbit-watch {
-  grid-area: watch;
-}
-
 .person-orbit-rest {
   grid-area: rest;
   margin: 0;
@@ -10275,8 +10164,8 @@ button.care-sidebar-link {
   .person-room-stage {
     grid-template-areas:
       "focus focus"
-      "heart watch"
-      "motion rest";
+      "heart motion"
+      "rest rest";
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: auto;
   }
@@ -10294,7 +10183,6 @@ button.care-sidebar-link {
     grid-template-areas:
       "focus"
       "heart"
-      "watch"
       "motion"
       "rest";
     grid-template-columns: 1fr;
@@ -10470,6 +10358,10 @@ button.care-sidebar-link {
   margin-top: 8px;
 }
 
+.person-mini-chart.is-alerting strong {
+  color: #b84a3c;
+}
+
 .person-mini-chart svg {
   height: 76px;
   margin-top: 8px;
@@ -10491,6 +10383,11 @@ button.care-sidebar-link {
   stroke-width: 4;
 }
 
+body[data-profile-chart-state="updated"] .person-mini-chart svg path:last-child {
+  animation: profile-chart-redraw 1000ms ease;
+  stroke-dasharray: 260;
+}
+
 .live-metric-value {
   border-radius: 6px;
   display: inline-block;
@@ -10506,45 +10403,46 @@ button.care-sidebar-link {
     filter 180ms ease;
 }
 
-body:not([data-profile-refresh-state="refreshing"]) .person-focus-metrics div:has(.live-metric-value),
-body:not([data-profile-refresh-state="refreshing"]) .person-profile-data-grid div:has(.live-metric-value),
-body:not([data-profile-refresh-state="refreshing"]) .person-orbit-card:has(.live-metric-value) {
-  animation: live-field-idle-pulse 4.8s ease-in-out infinite;
+.person-focus-metrics div,
+.person-profile-data-grid div:has(.live-metric-value),
+.person-orbit-card:has(.live-metric-value) {
   border: 1px solid var(--care-border-soft);
+  position: relative;
 }
 
-body:not([data-profile-refresh-state="refreshing"]) .person-focus-metrics div:nth-child(2):has(.live-metric-value),
-body:not([data-profile-refresh-state="refreshing"]) .person-profile-data-grid div:nth-child(2):has(.live-metric-value),
-body:not([data-profile-refresh-state="refreshing"]) .person-orbit-card:nth-of-type(2):has(.live-metric-value) {
-  animation-delay: -0.8s;
+.person-focus-metrics div::after,
+.person-profile-data-grid div:has(.live-metric-value)::after,
+.person-orbit-card:has(.live-metric-value)::after {
+  --live-field-pulse-bg-rest: rgba(79, 127, 99, 0);
+  --live-field-pulse-bg-peak: rgba(79, 127, 99, 0.08);
+  --live-field-pulse-border: rgba(79, 127, 99, 0.42);
+  animation: live-field-idle-pulse 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  background-color: rgba(79, 127, 99, 0);
+  border: 1px solid var(--live-field-pulse-border);
+  border-radius: inherit;
+  content: "";
+  inset: 0;
+  opacity: 0.18;
+  pointer-events: none;
+  position: absolute;
 }
 
-body:not([data-profile-refresh-state="refreshing"]) .person-profile-data-grid div:nth-child(3):has(.live-metric-value),
-body:not([data-profile-refresh-state="refreshing"]) .person-orbit-card:nth-of-type(3):has(.live-metric-value) {
-  animation-delay: -1.6s;
+.is-alerting-live-field {
+  border-color: rgba(184, 74, 60, 0.32);
 }
 
-body:not([data-profile-refresh-state="refreshing"]) .person-profile-data-grid div:nth-child(4):has(.live-metric-value),
-body:not([data-profile-refresh-state="refreshing"]) .person-orbit-card:nth-of-type(4):has(.live-metric-value) {
-  animation-delay: -2.4s;
-}
-
-body:not([data-profile-refresh-state="refreshing"]) .person-profile-data-grid div:nth-child(5):has(.live-metric-value) {
-  animation-delay: -3.2s;
-}
-
-body:not([data-profile-refresh-state="refreshing"]) .person-profile-data-grid div:nth-child(6):has(.live-metric-value) {
-  animation-delay: -4s;
+.is-alerting-live-field::after {
+  --live-field-pulse-bg-rest: rgba(184, 74, 60, 0.02);
+  --live-field-pulse-bg-peak: rgba(184, 74, 60, 0.16);
+  --live-field-pulse-border: rgba(184, 74, 60, 0.58);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .profile-live-orb,
-  .profile-live-console.pulse .profile-live-orb::after,
-  .profile-live-console.updated::before,
-  .profile-live-console.updated .profile-live-orb::after,
-  body:not([data-profile-refresh-state="refreshing"]) .person-focus-metrics div:has(.live-metric-value),
-  body:not([data-profile-refresh-state="refreshing"]) .person-profile-data-grid div:has(.live-metric-value),
-  body:not([data-profile-refresh-state="refreshing"]) .person-orbit-card:has(.live-metric-value) {
+  body[data-profile-chart-state="updated"] .person-mini-chart svg path:last-child,
+  .person-focus-metrics div::after,
+  .person-profile-data-grid div:has(.live-metric-value)::after,
+  .person-orbit-card:has(.live-metric-value)::after {
     animation: none;
   }
 }

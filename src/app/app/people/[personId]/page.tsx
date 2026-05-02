@@ -8,7 +8,6 @@ import { listActiveCareAlertsForPerson } from "@/lib/care-alerts";
 import { buildHrSamples } from "@/lib/care-demo-metrics";
 import { formatWatchBattery, getCarePerson } from "@/lib/care-people";
 import {
-  formatMlScore,
   formatRiskScore,
   listFallRiskObservationsForPerson,
   type FallRiskObservation,
@@ -91,8 +90,9 @@ function chartPoints(
 function MiniLineChart({
   label,
   points,
+  alertThreshold,
   suffix = "",
-}: Readonly<{ label: string; points: ChartPoint[]; suffix?: string }>) {
+}: Readonly<{ label: string; points: ChartPoint[]; alertThreshold?: number; suffix?: string }>) {
   if (points.length < 2) {
     return (
       <article className="person-mini-chart empty">
@@ -115,9 +115,10 @@ function MiniLineChart({
     })
     .join(" ");
   const latest = points.at(-1);
+  const isAlerting = alertThreshold !== undefined && latest !== undefined && latest.value > alertThreshold;
 
   return (
-    <article className="person-mini-chart">
+    <article className={`person-mini-chart${isAlerting ? " is-alerting" : ""}`}>
       <span>{label}</span>
       <strong>
         {latest?.value.toFixed(label.includes("Speed") ? 2 : 0)}
@@ -168,25 +169,10 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
     latestNumber(fallRiskObservations, (observation) => observation.rule_risk_score_100)
       ?.rule_risk_level ??
     null;
-  const mlScore =
-    person.fall_ml_risk_score_01 ??
-    latestNumber(fallRiskObservations, (observation) => observation.ml_risk_score_01)
-      ?.ml_risk_score_01 ??
-    null;
-  const steadinessClass =
-    person.walking_steadiness_class ??
-    latestNumber(fallRiskObservations, (observation) => observation.walking_steadiness_score_01)
-      ?.walking_steadiness_class ??
-    null;
   const recentInstabilityEvents = fallRiskObservations.filter(
     (observation) => observation.message_type === "instability_event",
   );
   const highInstabilityEvents = recentInstabilityEvents.filter((observation) => observation.severity === "high");
-  const mobilitySpeed =
-    person.walking_speed_mps ??
-    latestNumber(fallRiskObservations, (observation) => observation.walking_speed_mps)
-      ?.walking_speed_mps ??
-    null;
   const cadence =
     latestNumber(fallRiskObservations, (observation) => observation.cadence_spm)?.cadence_spm ?? null;
   const latestObservation = fallRiskObservations[0] ?? null;
@@ -196,11 +182,14 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
       ? "Live from webhook"
       : "Awaiting webhook"
     : "Non live profile";
+  const isRuleRiskHigh = ruleRiskScore !== null && ruleRiskScore > 50;
+  const isInstabilityHigh = instabilityScore !== null && instabilityScore > 50;
   const latestFallRiskSignature = [
     person.fall_risk_updated_at ?? "pending",
     latestObservation?.id ?? "no-observation",
     latestObservation?.message_type ?? "none",
     ruleRiskScore ?? "no-risk",
+    instabilityScore ?? "no-instability",
     person.heart_rate_bpm ?? "no-hr",
   ].join(":");
   const riskChart = chartPoints(fallRiskObservations, (observation) => observation.rule_risk_score_100);
@@ -257,7 +246,6 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
 
               <div className="person-room-stage">
                 <article className="person-focus-card" aria-label="Profile summary">
-                  <div className="person-focus-pulse" aria-hidden="true" />
                   <div className="person-focus-content">
                     <Image
                       className="person-focus-photo"
@@ -282,7 +270,7 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                           {person.heart_rate_bpm ?? "--"} bpm
                         </LiveMetricValue>
                       </div>
-                      <div>
+                      <div className={isRuleRiskHigh ? "is-alerting-live-field" : undefined}>
                         <span>Rule risk</span>
                         <LiveMetricValue compareKey={ruleRiskScore ?? "none"}>
                           {formatRiskScore(ruleRiskScore)}
@@ -296,7 +284,10 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                   </div>
                 </article>
 
-                <section className="person-orbit-card person-orbit-heart" aria-label="Rule risk">
+                <section
+                  className={`person-orbit-card person-orbit-heart${isRuleRiskHigh ? " is-alerting-live-field" : ""}`}
+                  aria-label="Rule risk"
+                >
                   <header>
                     <div>
                       <p className="care-detail-kicker">Rule Risk</p>
@@ -313,21 +304,25 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                   <p>Transparent score from thresholds and baselines.</p>
                 </section>
 
-                <section className="person-orbit-card person-orbit-watch" aria-label="Experimental ML score">
-                  <span>Experimental ML</span>
-                  <LiveMetricValue compareKey={mlScore ?? "none"}>{formatMlScore(mlScore)}</LiveMetricValue>
-                  <p>{person.fall_ml_model_version ?? "Non-clinical estimate"}</p>
-                </section>
-
-                <section className="person-orbit-card person-orbit-motion" aria-label="Walking steadiness">
-                  <span>Walking steadiness</span>
-                  <LiveMetricValue compareKey={steadinessClass ?? "none"}>
-                    {formatClass(steadinessClass)}
+                <section
+                  className={`person-orbit-card person-orbit-motion${isInstabilityHigh ? " is-alerting-live-field" : ""}`}
+                  aria-label="Instability"
+                >
+                  <span>Instability</span>
+                  <LiveMetricValue
+                    compareKey={`${instabilityScore ?? "none"}:${recentInstabilityEvents.length}`}
+                  >
+                    {instabilityScore === null ? recentInstabilityEvents.length : formatRiskScore(instabilityScore)}
                   </LiveMetricValue>
-                  <p>{mobilitySpeed === null ? "Speed pending" : `${mobilitySpeed.toFixed(2)} m/s`}</p>
+                  <p>
+                    {recentInstabilityEvents.length} events · {highInstabilityEvents.length} high
+                  </p>
                 </section>
 
-                <section className="person-orbit-card person-orbit-rest" aria-label="Recent instability">
+                <section
+                  className={`person-orbit-card person-orbit-rest${isInstabilityHigh ? " is-alerting-live-field" : ""}`}
+                  aria-label="Recent instability"
+                >
                   <span>Recent instability</span>
                   <LiveMetricValue
                     compareKey={`${instabilityScore ?? "none"}:${recentInstabilityEvents.length}`}
@@ -411,7 +406,7 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                   <div className="person-chart-grid">
                     <MiniLineChart label="Rule Risk" points={riskChart} />
                     <MiniLineChart label="Instability" points={instabilityChart} />
-                    <MiniLineChart label="Heart Rate" points={heartChart} suffix=" bpm" />
+                    <MiniLineChart label="Heart Rate" points={heartChart} alertThreshold={100} suffix=" bpm" />
                     <MiniLineChart label="Speed" points={mobilityChart} suffix=" m/s" />
                   </div>
                   <div className="person-latest-strip">

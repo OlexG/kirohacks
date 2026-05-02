@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 type LiveDataRefreshProps = {
@@ -39,10 +39,7 @@ export function LiveDataRefresh({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [progress, setProgress] = useState(0);
-  const [receivedUpdate, setReceivedUpdate] = useState(false);
-  const [refreshPulse, setRefreshPulse] = useState(false);
   const intervalRef = useRef<number | null>(null);
-  const pendingRef = useRef(false);
   const progressRef = useRef<number | null>(null);
   const refreshStartedAtRef = useRef<number>(0);
   const previousWatchedKeyRef = useRef<string | null | undefined>(watchedKey);
@@ -83,17 +80,6 @@ export function LiveDataRefresh({
   }, [intervalMs, router]);
 
   useEffect(() => {
-    if (pendingRef.current && !isPending) {
-      setRefreshPulse(true);
-      const timeout = window.setTimeout(() => setRefreshPulse(false), 1200);
-      pendingRef.current = isPending;
-      return () => window.clearTimeout(timeout);
-    }
-
-    pendingRef.current = isPending;
-  }, [isPending]);
-
-  useEffect(() => {
     if (variant !== "profile") {
       return;
     }
@@ -109,25 +95,27 @@ export function LiveDataRefresh({
   }, [isPending, variant]);
 
   useEffect(() => {
+    if (variant !== "profile") {
+      return;
+    }
+
     if (!watchedKey || previousWatchedKeyRef.current === watchedKey) {
       previousWatchedKeyRef.current = watchedKey;
       return;
     }
 
     previousWatchedKeyRef.current = watchedKey;
-    setReceivedUpdate(true);
-    document.body.dataset.profileLiveState = "updated";
+    document.body.dataset.profileChartState = "updated";
 
     const timeout = window.setTimeout(() => {
-      setReceivedUpdate(false);
-      delete document.body.dataset.profileLiveState;
-    }, 2200);
+      delete document.body.dataset.profileChartState;
+    }, 1200);
 
     return () => {
       window.clearTimeout(timeout);
-      delete document.body.dataset.profileLiveState;
+      delete document.body.dataset.profileChartState;
     };
-  }, [watchedKey]);
+  }, [variant, watchedKey]);
 
   if (variant === "silent") {
     return null;
@@ -135,9 +123,7 @@ export function LiveDataRefresh({
 
   return (
     <div
-      className={`profile-live-console${receivedUpdate ? " updated" : ""}${isPending ? " refreshing" : ""}${
-        refreshPulse ? " pulse" : ""
-      }`}
+      className={`profile-live-console${isPending ? " refreshing" : ""}`}
       aria-live="polite"
     >
       <div className="profile-live-console-top">
@@ -163,28 +149,8 @@ type LiveMetricValueProps = {
   compareKey: string | number | null | undefined;
 };
 
-export function LiveMetricValue({ children, className, compareKey }: Readonly<LiveMetricValueProps>) {
-  const [updated, setUpdated] = useState(false);
-  const previousKeyRef = useRef<string | number | null | undefined>(compareKey);
-  const displayClassName = useMemo(
-    () => ["live-metric-value", updated ? "is-updated" : "", className].filter(Boolean).join(" "),
-    [className, updated],
-  );
-
-  useEffect(() => {
-    if (previousKeyRef.current === compareKey) {
-      return;
-    }
-
-    previousKeyRef.current = compareKey;
-    setUpdated(true);
-
-    const timeout = window.setTimeout(() => {
-      setUpdated(false);
-    }, 1800);
-
-    return () => window.clearTimeout(timeout);
-  }, [compareKey]);
+export function LiveMetricValue({ children, className }: Readonly<LiveMetricValueProps>) {
+  const displayClassName = ["live-metric-value", className].filter(Boolean).join(" ");
 
   return <strong className={displayClassName}>{children}</strong>;
 }
