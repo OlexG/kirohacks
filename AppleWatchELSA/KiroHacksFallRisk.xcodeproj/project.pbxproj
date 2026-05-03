@@ -1,0 +1,388 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1D86347FFEFF3C12B7F93611 /* PayloadSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291DD9E6DDBA414DCF3806CC /* PayloadSchema.swift */; };
+		1E48060D4C439571EAA2AA16 /* FallRiskMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A6154A45088A36A244D7EE /* FallRiskMonitor.swift */; };
+		252F59F79C49705BD9DE0D72 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D2A41081434356FE256668EA /* HealthKit.framework */; };
+		5CA9B300D77C074DEBD2182C /* FallRiskWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E3FF829983055026F52C2D /* FallRiskWatchApp.swift */; };
+		6897809DFEFDBFC0E218E3B9 /* ProfileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5853551567D052EFFBD4EBE /* ProfileStore.swift */; };
+		709268B30CAEFDAE220F8941 /* WatchKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9EC51833EEF414E8782C5F97 /* WatchKit.framework */; };
+		7BA0D7A3D0028696A7DD024B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C58C5A10D7573F952E219A9 /* ContentView.swift */; };
+		915A3CCA0F5059214D17CB1C /* NetworkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40F6CDA158D69D3D433A6AA /* NetworkClient.swift */; };
+		93D56866CF7C74EC73593576 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1ACE5E1463230217385749F8 /* CoreMotion.framework */; };
+		A60F9A694F192DF7B00E23C0 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 374D10B8CB70A51757769E51 /* CoreLocation.framework */; };
+		C1115442FE7B735CD7122A20 /* FeatureExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA1F102E5B9EAF048796DBEC /* FeatureExtractor.swift */; };
+		CCF2CC763B70A53027CE17A2 /* HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81B04E51ED2677FE0CB98FAB /* HealthKitService.swift */; };
+		E21F0FF44CFF82F51F4BF95D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DF3F2C514386A7A1D51BD9C9 /* Assets.xcassets */; };
+		FFC873C93D2DF915DEC9EE57 /* RiskScoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD18C00CF97E2D7D2C530579 /* RiskScoring.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1ACE5E1463230217385749F8 /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = System/Library/Frameworks/CoreMotion.framework; sourceTree = SDKROOT; };
+		1C58C5A10D7573F952E219A9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		291DD9E6DDBA414DCF3806CC /* PayloadSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayloadSchema.swift; sourceTree = "<group>"; };
+		374D10B8CB70A51757769E51 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+		4756F9DD996C63117A2A53EA /* FallRiskWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FallRiskWatch.entitlements; sourceTree = "<group>"; };
+		81B04E51ED2677FE0CB98FAB /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
+		9EC51833EEF414E8782C5F97 /* WatchKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchKit.framework; path = System/Library/Frameworks/WatchKit.framework; sourceTree = SDKROOT; };
+		A9A6154A45088A36A244D7EE /* FallRiskMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallRiskMonitor.swift; sourceTree = "<group>"; };
+		B1E3FF829983055026F52C2D /* FallRiskWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallRiskWatchApp.swift; sourceTree = "<group>"; };
+		B40F6CDA158D69D3D433A6AA /* NetworkClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkClient.swift; sourceTree = "<group>"; };
+		BD18C00CF97E2D7D2C530579 /* RiskScoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiskScoring.swift; sourceTree = "<group>"; };
+		C5853551567D052EFFBD4EBE /* ProfileStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStore.swift; sourceTree = "<group>"; };
+		D17D0CBEB2306287C26EA491 /* ELSAMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ELSAMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D2A41081434356FE256668EA /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
+		DF3F2C514386A7A1D51BD9C9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E88B6DE53548CC67B4788DE6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		EA1F102E5B9EAF048796DBEC /* FeatureExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureExtractor.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AEFE97FC8494C5194590F4F6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A60F9A694F192DF7B00E23C0 /* CoreLocation.framework in Frameworks */,
+				93D56866CF7C74EC73593576 /* CoreMotion.framework in Frameworks */,
+				252F59F79C49705BD9DE0D72 /* HealthKit.framework in Frameworks */,
+				709268B30CAEFDAE220F8941 /* WatchKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		07E40D0314C242E3F1712433 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				374D10B8CB70A51757769E51 /* CoreLocation.framework */,
+				1ACE5E1463230217385749F8 /* CoreMotion.framework */,
+				D2A41081434356FE256668EA /* HealthKit.framework */,
+				9EC51833EEF414E8782C5F97 /* WatchKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		10339940F613E48ABA23239B /* FallRiskWatch */ = {
+			isa = PBXGroup;
+			children = (
+				DF3F2C514386A7A1D51BD9C9 /* Assets.xcassets */,
+				4756F9DD996C63117A2A53EA /* FallRiskWatch.entitlements */,
+				E88B6DE53548CC67B4788DE6 /* Info.plist */,
+				2A5AF378DAB49FF42F608854 /* App */,
+				B1870DCD0C1EAC0EDBF6E630 /* Core */,
+			);
+			path = FallRiskWatch;
+			sourceTree = "<group>";
+		};
+		2A5AF378DAB49FF42F608854 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				1C58C5A10D7573F952E219A9 /* ContentView.swift */,
+				B1E3FF829983055026F52C2D /* FallRiskWatchApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		B1870DCD0C1EAC0EDBF6E630 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				A9A6154A45088A36A244D7EE /* FallRiskMonitor.swift */,
+				EA1F102E5B9EAF048796DBEC /* FeatureExtractor.swift */,
+				81B04E51ED2677FE0CB98FAB /* HealthKitService.swift */,
+				B40F6CDA158D69D3D433A6AA /* NetworkClient.swift */,
+				291DD9E6DDBA414DCF3806CC /* PayloadSchema.swift */,
+				C5853551567D052EFFBD4EBE /* ProfileStore.swift */,
+				BD18C00CF97E2D7D2C530579 /* RiskScoring.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		F4BAA622BD92D143240A084C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D17D0CBEB2306287C26EA491 /* ELSAMonitor.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FAD63826EE62782758944ED2 = {
+			isa = PBXGroup;
+			children = (
+				10339940F613E48ABA23239B /* FallRiskWatch */,
+				07E40D0314C242E3F1712433 /* Frameworks */,
+				F4BAA622BD92D143240A084C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		81CFFEA3EFD215EEC4999366 /* FallRiskWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 875D4AB41712C3CCACCBB3EF /* Build configuration list for PBXNativeTarget "FallRiskWatch" */;
+			buildPhases = (
+				C098232CDB705536A237DB31 /* Sources */,
+				68E20895D4C0EFB4BC23DDDA /* Resources */,
+				AEFE97FC8494C5194590F4F6 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FallRiskWatch;
+			packageProductDependencies = (
+			);
+			productName = FallRiskWatch;
+			productReference = D17D0CBEB2306287C26EA491 /* ELSAMonitor.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AFB929FA8FA4FC05476B019B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+			};
+			buildConfigurationList = B92D0B517B3F6D24E34CFE09 /* Build configuration list for PBXProject "KiroHacksFallRisk" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = FAD63826EE62782758944ED2;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F4BAA622BD92D143240A084C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				81CFFEA3EFD215EEC4999366 /* FallRiskWatch */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		68E20895D4C0EFB4BC23DDDA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E21F0FF44CFF82F51F4BF95D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C098232CDB705536A237DB31 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7BA0D7A3D0028696A7DD024B /* ContentView.swift in Sources */,
+				1E48060D4C439571EAA2AA16 /* FallRiskMonitor.swift in Sources */,
+				5CA9B300D77C074DEBD2182C /* FallRiskWatchApp.swift in Sources */,
+				C1115442FE7B735CD7122A20 /* FeatureExtractor.swift in Sources */,
+				CCF2CC763B70A53027CE17A2 /* HealthKitService.swift in Sources */,
+				915A3CCA0F5059214D17CB1C /* NetworkClient.swift in Sources */,
+				1D86347FFEFF3C12B7F93611 /* PayloadSchema.swift in Sources */,
+				6897809DFEFDBFC0E218E3B9 /* ProfileStore.swift in Sources */,
+				FFC873C93D2DF915DEC9EE57 /* RiskScoring.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		20D1426AAF5A56DDFA0D7120 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
+		7D0F3E219129E444020A7502 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = FallRiskWatch/FallRiskWatch.entitlements;
+				DEVELOPMENT_TEAM = 2CT6AU9QP7;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = FallRiskWatch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kirohacks.fallrisk.watch;
+				PRODUCT_NAME = ELSAMonitor;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
+		96906C184097F719AB4D03E3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
+		97DEA8488A6DE57AB4237BC8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = FallRiskWatch/FallRiskWatch.entitlements;
+				DEVELOPMENT_TEAM = 2CT6AU9QP7;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = FallRiskWatch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kirohacks.fallrisk.watch;
+				PRODUCT_NAME = ELSAMonitor;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		875D4AB41712C3CCACCBB3EF /* Build configuration list for PBXNativeTarget "FallRiskWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7D0F3E219129E444020A7502 /* Debug */,
+				97DEA8488A6DE57AB4237BC8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B92D0B517B3F6D24E34CFE09 /* Build configuration list for PBXProject "KiroHacksFallRisk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				96906C184097F719AB4D03E3 /* Debug */,
+				20D1426AAF5A56DDFA0D7120 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AFB929FA8FA4FC05476B019B /* Project object */;
+}

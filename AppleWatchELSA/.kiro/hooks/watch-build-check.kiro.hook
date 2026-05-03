@@ -1,0 +1,12 @@
+{
+  "name": "Watch Build Check",
+  "description": "After agent changes, run the watchOS build when app source, project config, schema, or assets changed.",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "If this turn changed FallRiskWatch/**/*.swift, FallRiskWatch/**/*.plist, FallRiskWatch/**/*.entitlements, FallRiskWatch/Assets.xcassets/**, Schema/fallrisk.v1.ts, project.yml, or KiroHacksFallRisk.xcodeproj/**, run: xcodebuild -project KiroHacksFallRisk.xcodeproj -scheme FallRiskWatch -configuration Debug -destination generic/platform=watchOS -derivedDataPath /private/tmp/KiroHacksFallRiskDerivedData CODE_SIGNING_ALLOWED=NO build. Summarize any compiler errors and fix issues caused by the current change. If no relevant files changed, do nothing."
+  }
+}

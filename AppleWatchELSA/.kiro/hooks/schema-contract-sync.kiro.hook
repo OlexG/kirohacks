@@ -1,0 +1,18 @@
+{
+  "name": "Schema Contract Sync",
+  "description": "When Swift or TypeScript payload schema files change, review the companion schema and documentation for drift.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "Schema/fallrisk.v1.ts",
+      "FallRiskWatch/Core/PayloadSchema.swift",
+      "FallRiskWatch/Core/NetworkClient.swift",
+      "README.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the schema-related change for contract drift. Compare Schema/fallrisk.v1.ts, FallRiskWatch/Core/PayloadSchema.swift, NetworkClient endpoint constants, and README payload documentation. If a message type, enum raw value, nullable field, endpoint, or envelope field changed, update the corresponding files so the watch app and companion webapp contract stay synchronized. Do not change unrelated app behavior."
+  }
+}
