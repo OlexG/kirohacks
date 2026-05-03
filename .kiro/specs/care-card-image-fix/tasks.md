@@ -1,0 +1,86 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Relative Avatar Paths Not Resolved to Absolute URLs
+  - **CRITICAL**: This test MUST FAIL on unfixed code — failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior — it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: Scope the property to avatar strings that start with `/` but not `//` (the bug condition). Use fast-check to generate random relative paths matching this pattern.
+  - Install `fast-check` as a dev dependency in `expo_app/` (`npm install --save-dev fast-check`)
+  - Create or update `expo_app/__tests__/care-card-bug-condition.test.ts` with a property-based test:
+    - Generate random relative paths using `fc.stringMatching(/^\/[a-z0-9\-_\/\.]+/)` or similar arbitrary
+    - For each generated relative path, call `resolveAvatarUrl(path)` with a known base URL (e.g., `https://example.com`)
+    - Assert the result starts with the base URL (`https://example.com`)
+    - Assert the result ends with the original relative path
+    - Assert the result is a valid absolute URL (starts with `https://`)
+  - Bug condition from design: `isBugCondition(input)` where `input.avatar IS NOT NULL AND input.avatar starts with "/" AND input.avatar does NOT start with "//"`
+  - Expected behavior from design: `resolveAvatarUrl` returns `baseUrl + relativePath` producing a fully-qualified URL
+  - Run test on UNFIXED code — the `resolveAvatarUrl` function does not exist yet, so the test will FAIL
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct — it proves the bug exists because there is no URL resolution layer)
+  - Document counterexamples found (e.g., `resolveAvatarUrl` is not defined, relative paths pass through unresolved)
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 2.1, 2.2_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Non-Relative Avatar Inputs Unchanged
+  - **IMPORTANT**: Follow observation-first methodology
+  - Install `fast-check` if not already installed (should be done in task 1)
+  - Observe behavior on UNFIXED code for non-buggy inputs:
+    - Observe: absolute URLs like `https://example.com/photo.jpg` should pass through unchanged
+    - Observe: data URIs like `data:image/svg+xml;utf8,...` should pass through unchanged
+    - Observe: `null` should return `null`
+    - Observe: empty string `""` should return `null`
+    - Observe: protocol-relative URLs like `//cdn.example.com/photo.jpg` should pass through unchanged
+  - Create or update `expo_app/__tests__/care-card-preservation.test.ts` with property-based tests:
+    - **Property 2a — Absolute URL preservation**: Use `fc.webUrl()` to generate random absolute URLs. Assert `resolveAvatarUrl(url)` returns the input unchanged.
+    - **Property 2b — Data URI preservation**: Use `fc.constantFrom('data:image/png;base64,abc', 'data:image/svg+xml;utf8,...', 'data:image/jpeg;base64,xyz')` or generate data URI strings. Assert `resolveAvatarUrl(uri)` returns the input unchanged.
+    - **Property 2c — Null/empty preservation**: Assert `resolveAvatarUrl(null)` returns `null` and `resolveAvatarUrl("")` returns `null`.
+    - **Property 2d — Protocol-relative URL preservation**: Generate strings starting with `//`. Assert `resolveAvatarUrl(url)` returns the input unchanged.
+  - Preservation requirements from design: all inputs where `NOT isBugCondition(input)` — absolute URLs, data URIs, null, empty strings, protocol-relative URLs — must be completely unaffected
+  - Run tests on UNFIXED code — since `resolveAvatarUrl` doesn't exist yet, these tests will need to import the function once it's created. Write the tests to import from a module that will be created in the fix step.
+  - **EXPECTED OUTCOME**: Tests PASS on unfixed code once the function exists (confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3_
+
+- [x] 3. Fix for care card avatar not displaying due to unresolved relative paths
+
+  - [x] 3.1 Implement the fix
+    - Add `EXPO_PUBLIC_WEBAPP_URL` to `expo_app/.env` (e.g., `EXPO_PUBLIC_WEBAPP_URL=https://your-app.vercel.app`)
+    - Add `WEBAPP_BASE_URL` constant in `expo_app/App.tsx` reading from `process.env?.EXPO_PUBLIC_WEBAPP_URL`, similar to existing `SUPABASE_URL` pattern
+    - Create `resolveAvatarUrl(avatar: string | null): string | null` function in `expo_app/App.tsx`:
+      - If input is `null` or empty string → return `null`
+      - If input starts with `http://` or `https://` → return as-is
+      - If input starts with `data:image/` → return as-is
+      - If input starts with `//` → return as-is (protocol-relative)
+      - If input starts with `/` → prepend `WEBAPP_BASE_URL` and return
+      - Otherwise → return `null` (unrecognized format)
+    - Export `resolveAvatarUrl` for testability
+    - Update `mapLiveData()`: change `avatar: person.avatar ?? null` to `avatar: resolveAvatarUrl(person.avatar)`
+    - No changes to `isValidAvatarUrl()` — after resolution, all avatar strings will be absolute URLs, data URIs, or null
+    - No changes to `CareView` component
+    - _Bug_Condition: isBugCondition(input) where input.avatar starts with "/" and not "//"_
+    - _Expected_Behavior: resolveAvatarUrl returns baseUrl + relativePath for relative paths_
+    - _Preservation: Absolute URLs, data URIs, null, empty strings, protocol-relative URLs unchanged_
+    - _Requirements: 1.1, 2.1, 2.2, 3.1, 3.2, 3.3_
+
+  - [x] 3.2 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Relative Avatar Paths Resolved to Absolute URLs
+    - **IMPORTANT**: Re-run the SAME test from task 1 — do NOT write a new test
+    - The test from task 1 encodes the expected behavior (relative paths resolved to absolute URLs)
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1: `npx jest --testPathPattern care-card-bug-condition`
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed — resolveAvatarUrl now exists and resolves relative paths)
+    - _Requirements: 2.1, 2.2_
+
+  - [x] 3.3 Verify preservation tests still pass
+    - **Property 2: Preservation** - Non-Relative Avatar Inputs Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 — do NOT write new tests
+    - Run preservation property tests from step 2: `npx jest --testPathPattern care-card-preservation`
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions — absolute URLs, data URIs, null, empty strings all unchanged)
+    - Confirm all tests still pass after fix (no regressions)
+
+- [x] 4. Checkpoint — Ensure all tests pass
+  - Run full test suite: `npx jest` from `expo_app/`
+  - Ensure all tests pass (bug condition, preservation, and any existing tests)
+  - Ask the user if questions arise

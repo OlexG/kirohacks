@@ -51,6 +51,7 @@ type ElderProfile = {
   steps: string;
   sleep: string;
   initials: string;
+  avatar: string | null;
 };
 
 type AlertItem = {
@@ -93,6 +94,7 @@ type CarePersonRow = {
   walking_step_length_m?: number | null;
   walking_asymmetry_pct?: number | null;
   walking_double_support_pct?: number | null;
+  avatar: string | null;
 };
 
 type CareRuleRow = {
@@ -222,6 +224,7 @@ const SUPABASE_SERVICE_ROLE_KEY =
   process.env?.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ??
   process.env?.SUPABASE_SERVICE_ROLE_KEY ??
   "";
+const WEBAPP_BASE_URL = process.env?.EXPO_PUBLIC_WEBAPP_URL ?? "";
 
 const defaultElder: ElderProfile = {
   name: "Sabawoon Hakimi",
@@ -237,6 +240,7 @@ const defaultElder: ElderProfile = {
   steps: "--",
   sleep: "--",
   initials: "SH",
+  avatar: null,
 };
 
 const defaultMedicationWeek: MedicationDay[] = [
@@ -513,6 +517,25 @@ function formatNullableNumber(value: number | null | undefined, suffix = "") {
   return value === null || value === undefined ? "--" : `${Number(value.toFixed(2))}${suffix}`;
 }
 
+function isValidAvatarUrl(url: string | null | undefined): url is string {
+  return typeof url === "string" && /^(https?:\/\/|data:image\/|\/)/.test(url);
+}
+
+/**
+ * Resolve an avatar string to an absolute URL that React Native's Image component can load.
+ * Relative paths (starting with `/` but not `//`) are prepended with the webapp base URL.
+ * Absolute URLs, data URIs, and protocol-relative URLs pass through unchanged.
+ * Null, empty strings, and unrecognized formats return null (triggering initials fallback).
+ */
+export function resolveAvatarUrl(avatar: string | null, baseUrl: string = WEBAPP_BASE_URL): string | null {
+  if (avatar === null || avatar === "") return null;
+  if (avatar.startsWith("http://") || avatar.startsWith("https://")) return avatar;
+  if (avatar.startsWith("data:image/")) return avatar;
+  if (avatar.startsWith("//")) return avatar;
+  if (avatar.startsWith("/")) return baseUrl + avatar;
+  return null;
+}
+
 function fallRiskTone(observation: FallRiskObservationRow | undefined): AlertTone {
   if (!observation) return "info";
   const sev = observation.severity?.toLowerCase();
@@ -746,6 +769,7 @@ function mapLiveData(
       steps: formatSteps(latestSteps),
       sleep: formatBloodPressure(latestReading),
       initials: person.initials ?? initialsFromName(name),
+      avatar: resolveAvatarUrl(person.avatar),
     },
     heartSamples,
     fallRiskMetrics: buildFallRiskMetrics(latestFallRisk, person),
@@ -1041,7 +1065,17 @@ function CareView({
       <View style={styles.profileCard}>
         <View style={styles.profileTop}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{elder.initials}</Text>
+            {isValidAvatarUrl(elder.avatar) ? (
+              <Image
+                source={{ uri: elder.avatar }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+                accessible={true}
+                accessibilityLabel={`${elder.name} photo`}
+              />
+            ) : (
+              <Text style={styles.avatarText}>{elder.initials}</Text>
+            )}
           </View>
           <View style={styles.profileText}>
             <Text style={styles.profileName}>{elder.name}</Text>
@@ -1049,14 +1083,10 @@ function CareView({
               {elder.relation} · Age {elder.age}
             </Text>
           </View>
-          <View style={styles.statusPill}>
-            <Text style={styles.statusPillText}>{elder.status}</Text>
-          </View>
         </View>
-        <Text style={styles.profileBody}>{elder.statusDetail}</Text>
         <View style={styles.profileStats}>
           <MetricTile label="Location" value={elder.location} />
-          <MetricTile label="Last seen" value={elder.lastSeen} />
+          <MetricTile label="Status" value={elder.status} />
         </View>
       </View>
 
@@ -1071,9 +1101,6 @@ function CareView({
 
       <View style={styles.fallRiskCard}>
         <Text style={styles.sectionTitle}>Fall risk</Text>
-        <Text style={styles.fallRiskBody}>
-          Seeded from Supabase fall_risk_observations for Sabawoon.
-        </Text>
         <View style={styles.metricGrid}>
           {fallRiskMetrics.map(([label, value]) => (
             <MetricTile key={label} label={label} value={value} />
@@ -1544,6 +1571,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 58,
   },
+  avatarImage: {
+    borderRadius: 16,
+    height: 58,
+    width: 58,
+  },
   avatarText: {
     color: colors.ink,
     fontSize: 17,
@@ -1563,7 +1595,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginTop: 3,
   },
+  statusRow: {
+    flexDirection: "row",
+    marginTop: 10,
+  },
   statusPill: {
+    alignSelf: "flex-start",
     backgroundColor: colors.sand,
     borderColor: colors.taupe,
     borderRadius: 999,
