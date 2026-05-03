@@ -1,12 +1,16 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { MedicationWeek } from "@/lib/medications";
 
-const ALERT_KEY = "medication_missed";
+const ALERT_KEY_PREFIX = "medication_missed";
+
+function medicationMissedAlertKey(personId: string, scheduleDate: string) {
+  return `${ALERT_KEY_PREFIX}:${personId}:${scheduleDate}`;
+}
 
 /**
- * Insert a medication_missed alert into care_alerts if one doesn't already
- * exist for this person + date. Uses a select-before-insert pattern for
- * deduplication so it's safe to call repeatedly.
+ * Insert a medication_missed alert into care_alerts if one doesn't already exist
+ * for this person + date. The alert_key includes the date because care_alerts
+ * enforces alert_key uniqueness globally.
  */
 export async function createMedicationMissedAlert(
   personId: string,
@@ -16,14 +20,14 @@ export async function createMedicationMissedAlert(
   totalDoses: number,
 ) {
   const supabase = getSupabaseAdmin();
+  const alertKey = medicationMissedAlertKey(personId, scheduleDate);
 
-  // Check for existing active alert
+  // Check for any existing alert for the same person + schedule date.
   const { data: existing } = await supabase
     .from("care_alerts")
     .select("id")
     .eq("person_id", personId)
-    .eq("alert_key", ALERT_KEY)
-    .eq("status", "active")
+    .in("alert_key", [alertKey, ALERT_KEY_PREFIX])
     .eq("metric_value", scheduleDate)
     .limit(1);
 
@@ -33,21 +37,26 @@ export async function createMedicationMissedAlert(
 
   const dateLabel = formatDateLabel(scheduleDate);
 
-  const { error } = await supabase.from("care_alerts").insert({
-    id: crypto.randomUUID(),
-    alert_key: ALERT_KEY,
-    person_id: personId,
-    title: "Medication not administered",
-    signal_label: "Medication schedule",
-    severity: "warning",
-    status: "active",
-    summary: `${personName} has ${pendingDoses} of ${totalDoses} doses pending for ${dateLabel}.`,
-    metric_label: "Schedule date",
-    metric_value: scheduleDate,
-    triggered_label: "Missed",
-    next_step: "Review medication log and confirm with care team.",
-    sort_order: 10,
-  });
+  const { error } = await supabase
+    .from("care_alerts")
+    .upsert(
+      {
+        id: crypto.randomUUID(),
+        alert_key: alertKey,
+        person_id: personId,
+        title: "Medication not administered",
+        signal_label: "Medication schedule",
+        severity: "warning",
+        status: "active",
+        summary: `${personName} has ${pendingDoses} of ${totalDoses} doses pending for ${dateLabel}.`,
+        metric_label: "Schedule date",
+        metric_value: scheduleDate,
+        triggered_label: "Missed",
+        next_step: "Review medication log and confirm with care team.",
+        sort_order: 10,
+      },
+      { onConflict: "alert_key", ignoreDuplicates: true },
+    );
 
   if (error) {
     throw new Error(`Unable to create medication missed alert: ${error.message}`);
@@ -63,12 +72,13 @@ export async function resolveMedicationMissedAlert(
   scheduleDate: string,
 ) {
   const supabase = getSupabaseAdmin();
+  const alertKey = medicationMissedAlertKey(personId, scheduleDate);
 
   const { error } = await supabase
     .from("care_alerts")
     .update({ status: "resolved", updated_at: new Date().toISOString() })
     .eq("person_id", personId)
-    .eq("alert_key", ALERT_KEY)
+    .in("alert_key", [alertKey, ALERT_KEY_PREFIX])
     .eq("status", "active")
     .eq("metric_value", scheduleDate);
 
@@ -82,7 +92,7 @@ export async function resolveMedicationMissedAlert(
  * for any day that has scheduled doses. This is meant to be called on page
  * load so missed days are surfaced even if no cron is running.
  *
- * Days that already have an active or resolved alert are skipped.
+ * Days that already have an active, acknowledged, or resolved alert are skipped.
  */
 export async function checkMissedMedications(
   personId: string,
@@ -94,14 +104,13 @@ export async function checkMissedMedications(
 
   const supabase = getSupabaseAdmin();
 
-  // Load all medication_missed alerts for this person (active + resolved)
-  // so we know which dates are already covered.
+  // Load all medication_missed alerts for this person so we know which dates are covered.
   const { data: existingAlerts } = await supabase
     .from("care_alerts")
     .select("metric_value, status")
     .eq("person_id", personId)
-    .eq("alert_key", ALERT_KEY)
-    .in("status", ["active", "resolved"]);
+    .or(`alert_key.eq.${ALERT_KEY_PREFIX},alert_key.like.${ALERT_KEY_PREFIX}:%`)
+    .in("status", ["active", "acknowledged", "resolved"]);
 
   const coveredDates = new Set(
     (existingAlerts ?? []).map((alert: { metric_value: string }) => alert.metric_value),
