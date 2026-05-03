@@ -19,6 +19,7 @@ import {
   getNextMedicationLabel,
   listMedicationsForPerson,
 } from "@/lib/medications";
+import { checkMissedMedications } from "@/lib/medication-alerts";
 import { AppSidebar } from "../../sidebar";
 import { resolvePersonPhoto } from "@/lib/care-person-image";
 import { LiveDataRefresh, LiveMetricValue } from "../../live-data-refresh";
@@ -151,6 +152,10 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
 
   const image = resolvePersonPhoto(person);
   const meds = buildMedicationWeek(medications);
+
+  // Create medication_missed alerts for any past days with unchecked doses
+  await checkMissedMedications(personId, person.name, meds);
+
   const samples = buildHrSamples(person.heart_rate_bpm ?? 70, person.sort_order);
   const minHeartRate = Math.min(...samples);
   const maxHeartRate = Math.max(...samples);

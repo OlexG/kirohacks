@@ -63,6 +63,7 @@ type AlertItem = {
 type AppData = {
   elder: ElderProfile;
   heartSamples: number[];
+  fallRiskMetrics: string[][];
   medicationWeek: MedicationDay[];
   alerts: AlertItem[];
   deviceMetrics: string[][];
@@ -80,6 +81,18 @@ type CarePersonRow = {
   initials: string | null;
   alert: "urgent" | "warning" | "stable" | "offline" | null;
   context: string | null;
+  fall_rule_risk_score_100?: number | null;
+  fall_rule_instability_score_100?: number | null;
+  fall_rule_risk_level?: string | null;
+  fall_ml_risk_score_01?: number | null;
+  fall_ml_model_version?: string | null;
+  fall_risk_updated_at?: string | null;
+  walking_steadiness_class?: string | null;
+  walking_steadiness_score_01?: number | null;
+  walking_speed_mps?: number | null;
+  walking_step_length_m?: number | null;
+  walking_asymmetry_pct?: number | null;
+  walking_double_support_pct?: number | null;
 };
 
 type CareRuleRow = {
@@ -92,6 +105,18 @@ type CareRuleRow = {
   active: boolean | null;
   notification_channel: string | null;
   notes: string | null;
+};
+
+type CareAlertRow = {
+  id: string;
+  title: string;
+  severity: "info" | "warning" | "urgent";
+  summary: string;
+  metric_label: string;
+  metric_value: string;
+  triggered_label: string;
+  next_step: string;
+  created_at: string;
 };
 
 type MedicationRow = {
@@ -113,6 +138,67 @@ type MedicationRow = {
   administered?: boolean;
 };
 
+type BiometricsRow = {
+  id: string;
+  person_id: string;
+  person_name: string | null;
+  source: string | null;
+  alert_type: string | null;
+  severity: "info" | "warning" | "urgent" | null;
+  occurred_at: string;
+  heart_rate_bpm: number | null;
+  steps: number | null;
+  watch_battery_percent: number | null;
+  blood_pressure_systolic?: number | null;
+  blood_pressure_diastolic?: number | null;
+};
+
+/** Mirrors `public.fall_risk_observations` for `person-sabawoon-hakimi`. */
+type FallRiskObservationRow = {
+  id: string;
+  person_id: string;
+  schema_version: string;
+  message_type: string;
+  device_id: string;
+  session_id: string | null;
+  generated_at: string;
+  sequence: number;
+  source_app: string;
+  window_start: string | null;
+  window_end: string | null;
+  detected_at: string | null;
+  event_type: string | null;
+  severity: string | null;
+  activity_class: string | null;
+  rule_risk_score_100: number | null;
+  rule_instability_score_100: number | null;
+  rule_risk_level: string | null;
+  ml_risk_score_01: number | null;
+  ml_model_version: string | null;
+  walking_steadiness_score_01: number | null;
+  walking_steadiness_class: string | null;
+  walking_speed_mps: number | null;
+  walking_step_length_m: number | null;
+  walking_asymmetry_pct: number | null;
+  walking_double_support_pct: number | null;
+  heart_rate_bpm: number | null;
+  cadence_spm: number | null;
+  cadence_cv_pct: number | null;
+  stride_time_cv_pct: number | null;
+  accel_peak_g: number | null;
+  jerk_peak_g_per_s: number | null;
+  gyro_peak_rad_s: number | null;
+  attitude_change_deg: number | null;
+  sway_rms_deg: number | null;
+  step_count: number | null;
+  altitude_delta_m: number | null;
+  floors_ascended: number | null;
+  floors_descended: number | null;
+  risk_flags: Array<{ code?: string; severity?: string; value?: unknown }> | unknown[];
+  payload: Record<string, unknown>;
+  created_at: string;
+};
+
 const colors = {
   cream: "#F5F3EE",
   surface: "#FDFCF8",
@@ -126,10 +212,16 @@ const colors = {
 };
 
 const PERSON_ID = "person-sabawoon-hakimi";
+const LIVE_REFRESH_MS = 3500;
 const SUPABASE_URL =
   process.env?.EXPO_PUBLIC_SUPABASE_URL ?? process.env?.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_ANON_KEY =
   process.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+/** Bypasses RLS; only appropriate for demos — never ship a real service role inside a public app bundle. */
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env?.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ??
+  process.env?.SUPABASE_SERVICE_ROLE_KEY ??
+  "";
 
 const defaultElder: ElderProfile = {
   name: "Sabawoon Hakimi",
@@ -140,14 +232,12 @@ const defaultElder: ElderProfile = {
   statusDetail: "Fetching the latest Supabase record for Sabawoon Hakimi.",
   location: "Watch list",
   lastSeen: "Syncing",
-  heartRate: 112,
+  heartRate: 0,
   oxygen: "--",
   steps: "--",
   sleep: "--",
   initials: "SH",
 };
-
-const defaultHeartSamples = [104, 108, 112, 110, 115, 113, 109, 111, 116, 112, 108, 110];
 
 const defaultMedicationWeek: MedicationDay[] = [
   {
@@ -319,7 +409,13 @@ const defaultDeviceMetrics = [
 
 const defaultAppData: AppData = {
   elder: defaultElder,
-  heartSamples: defaultHeartSamples,
+  heartSamples: [],
+  fallRiskMetrics: [
+    ["Risk level", "--"],
+    ["Risk score", "--"],
+    ["Steadiness", "--"],
+    ["Walking speed", "--"],
+  ],
   medicationWeek: defaultMedicationWeek,
   alerts: defaultAlerts,
   deviceMetrics: defaultDeviceMetrics,
@@ -333,11 +429,14 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 ];
 
 function getSupabaseHeaders() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  if (!SUPABASE_URL) return null;
+
+  const key = SUPABASE_SERVICE_ROLE_KEY.trim() || SUPABASE_ANON_KEY.trim();
+  if (!key) return null;
 
   return {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    apikey: key,
+    Authorization: `Bearer ${key}`,
   };
 }
 
@@ -372,13 +471,6 @@ function initialsFromName(name: string) {
     .toUpperCase();
 }
 
-function buildHeartSamples(base: number) {
-  return Array.from({ length: 12 }, (_, index) => {
-    const wave = Math.sin(index * 0.75) * 5 + Math.cos(index * 1.2) * 3;
-    return Math.max(0, Math.round(base + wave));
-  });
-}
-
 function formatRuleBody(rule: CareRuleRow) {
   if (rule.notes) return rule.notes;
 
@@ -388,6 +480,126 @@ function formatRuleBody(rule: CareRuleRow) {
       : ` ${rule.threshold}${rule.unit ? ` ${rule.unit}` : ""}`;
 
   return `${rule.signal_label ?? "Care signal"} ${rule.operator ?? "changed"}${threshold}.`;
+}
+
+function formatReadingTime(value: string | null | undefined) {
+  if (!value) return "No reading";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Live reading";
+
+  return date.toLocaleString(undefined, {
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    month: "short",
+  });
+}
+
+function formatSteps(value: number | null | undefined) {
+  return value === null || value === undefined ? "--" : value.toLocaleString();
+}
+
+function formatBloodPressure(reading: BiometricsRow | undefined) {
+  if (!reading?.blood_pressure_systolic || !reading.blood_pressure_diastolic) return "--";
+  return `${reading.blood_pressure_systolic}/${reading.blood_pressure_diastolic}`;
+}
+
+function formatPercentFromRatio(value: number | null | undefined) {
+  return value === null || value === undefined ? "--" : `${Math.round(value * 100)}%`;
+}
+
+function formatNullableNumber(value: number | null | undefined, suffix = "") {
+  return value === null || value === undefined ? "--" : `${Number(value.toFixed(2))}${suffix}`;
+}
+
+function fallRiskTone(observation: FallRiskObservationRow | undefined): AlertTone {
+  if (!observation) return "info";
+  const sev = observation.severity?.toLowerCase();
+  if (sev === "high" || sev === "urgent") return "urgent";
+  if (sev === "moderate" || sev === "warning") return "warning";
+  if (observation.rule_risk_level === "moderate" || observation.rule_risk_level === "high") {
+    return observation.rule_risk_level === "high" ? "urgent" : "warning";
+  }
+  return "info";
+}
+
+function buildFallRiskMetrics(
+  observation: FallRiskObservationRow | undefined,
+  person: CarePersonRow,
+) {
+  if (!observation) {
+    return [
+      ["Risk level", titleCase(person.fall_rule_risk_level ?? "unknown")],
+      [
+        "Risk score",
+        person.fall_rule_risk_score_100 === null || person.fall_rule_risk_score_100 === undefined
+          ? "--"
+          : `${person.fall_rule_risk_score_100}/100`,
+      ],
+      [
+        "Steadiness",
+        person.walking_steadiness_class
+          ? titleCase(person.walking_steadiness_class)
+          : formatPercentFromRatio(person.walking_steadiness_score_01),
+      ],
+      ["Walking speed", formatNullableNumber(person.walking_speed_mps, " m/s")],
+    ];
+  }
+
+  return [
+    ["Risk level", titleCase(observation.rule_risk_level ?? observation.severity ?? "unknown")],
+    ["Risk score", observation.rule_risk_score_100 === null ? "--" : `${observation.rule_risk_score_100}/100`],
+    [
+      "Steadiness",
+      observation.walking_steadiness_class
+        ? titleCase(observation.walking_steadiness_class)
+        : formatPercentFromRatio(observation.walking_steadiness_score_01),
+    ],
+    ["Walking speed", formatNullableNumber(observation.walking_speed_mps, " m/s")],
+  ];
+}
+
+function buildFallRiskAlert(observation: FallRiskObservationRow | undefined) {
+  if (!observation) return null;
+
+  const flags = Array.isArray(observation.risk_flags)
+    ? observation.risk_flags
+        .map((flag) =>
+          flag && typeof flag === "object" && "code" in flag ? (flag as { code?: string }).code : undefined,
+        )
+        .filter(Boolean)
+        .join(", ")
+    : "";
+  const eventLabel = observation.event_type
+    ? titleCase(observation.event_type)
+    : titleCase(observation.message_type ?? "fall risk observation");
+  const score =
+    observation.rule_risk_score_100 === null ? "" : ` Risk score ${observation.rule_risk_score_100}/100.`;
+
+  return {
+    tone: fallRiskTone(observation),
+    title: eventLabel,
+    body: `${titleCase(observation.activity_class ?? "Mobility")} reading from fall_risk_observations.${score}${
+      flags ? ` Flags: ${flags}.` : ""
+    }`,
+    time: formatReadingTime(observation.detected_at ?? observation.generated_at),
+  } satisfies AlertItem;
+}
+
+function mapCareAlertTone(severity: CareAlertRow["severity"]): AlertTone {
+  if (severity === "urgent") return "urgent";
+  if (severity === "warning") return "warning";
+  return "info";
+}
+
+function mapCareAlerts(alerts: CareAlertRow[]) {
+  return alerts.map<AlertItem>((alert) => ({
+    tone: mapCareAlertTone(alert.severity),
+    title: alert.title,
+    body: alert.summary || `${alert.metric_label}: ${alert.metric_value}`,
+    time: alert.triggered_label || formatReadingTime(alert.created_at),
+  }));
 }
 
 function mapRuleTone(severity: CareRuleRow["severity"]): AlertTone {
@@ -461,28 +673,63 @@ function buildMedicationWeek(rows: MedicationRow[]) {
   });
 }
 
-function mapLiveData(person: CarePersonRow, rules: CareRuleRow[], medications: MedicationRow[]) {
-  const heartRate = person.heart_rate_bpm ?? 0;
+function mapLiveData(
+  person: CarePersonRow,
+  careAlerts: CareAlertRow[],
+  rules: CareRuleRow[],
+  medications: MedicationRow[],
+  biometrics: BiometricsRow[],
+  fallRiskObservations: FallRiskObservationRow[],
+) {
+  const latestReading = biometrics[0];
+  const latestFallRisk = fallRiskObservations[0];
+  const fallRiskHeartSamples = fallRiskObservations
+    .map((reading) => ({
+        at: reading.generated_at ?? reading.detected_at ?? "",
+        value: reading.heart_rate_bpm,
+      }))
+    .filter((reading): reading is { at: string; value: number } => typeof reading.value === "number")
+    .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+    .slice(-24)
+    .map((reading) => reading.value);
+  const legacyHeartSamples = biometrics
+    .map((reading) => ({ at: reading.occurred_at, value: reading.heart_rate_bpm }))
+    .filter((reading): reading is { at: string; value: number } => typeof reading.value === "number")
+    .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+    .slice(-24)
+    .map((reading) => reading.value);
+  const heartSamples = (fallRiskHeartSamples.length > 0 ? fallRiskHeartSamples : legacyHeartSamples)
+    .filter((value): value is number => typeof value === "number");
+  const heartRate = latestFallRisk?.heart_rate_bpm ?? latestReading?.heart_rate_bpm ?? person.heart_rate_bpm ?? 0;
+  const latestSteps = latestFallRisk?.step_count ?? latestReading?.steps;
+  const latestGeneratedAt = latestFallRisk?.generated_at ?? latestReading?.occurred_at;
   const name = person.name || defaultElder.name;
+  const fallRiskAlert = buildFallRiskAlert(latestFallRisk);
+  const activeCareAlerts = mapCareAlerts(careAlerts);
   const personAlertTone: AlertTone =
     person.alert === "urgent" ? "urgent" : person.alert === "warning" ? "warning" : "info";
-  const alerts = rules.length
-    ? rules
-        .filter((rule) => rule.active !== false)
-        .map<AlertItem>((rule) => ({
-          tone: mapRuleTone(rule.severity),
-          title: rule.signal_label ?? "Care rule",
-          body: formatRuleBody(rule),
-          time: rule.notification_channel ?? "Live rule",
-        }))
-    : [
-        {
-          tone: personAlertTone,
-          title: person.status ?? "Live care status",
-          body: person.context ?? "Latest Supabase care_people record loaded for Sabawoon Hakimi.",
-          time: person.last_seen_label ?? "Live",
-        },
-      ];
+  const alerts = [
+    ...(fallRiskAlert ? [fallRiskAlert] : []),
+    ...(activeCareAlerts.length
+      ? activeCareAlerts
+      : rules.length
+      ? rules
+          .filter((rule) => rule.active !== false)
+          .map<AlertItem>((rule) => ({
+            tone: mapRuleTone(rule.severity),
+            title: rule.signal_label ?? "Care rule",
+            body: formatRuleBody(rule),
+            time: rule.notification_channel ?? "Live rule",
+          }))
+      : [
+          {
+            tone: personAlertTone,
+            title: person.status ?? "Live care status",
+            body: person.context ?? "Latest Supabase care_people record loaded for Sabawoon Hakimi.",
+            time: person.last_seen_label ?? "Live",
+          },
+        ]),
+  ];
 
   return {
     elder: {
@@ -493,46 +740,196 @@ function mapLiveData(person: CarePersonRow, rules: CareRuleRow[], medications: M
       status: person.status ?? defaultElder.status,
       statusDetail: person.context ?? defaultElder.statusDetail,
       location: person.care_group ? titleCase(person.care_group) : defaultElder.location,
-      lastSeen: person.last_seen_label ?? defaultElder.lastSeen,
+      lastSeen: latestGeneratedAt ? formatReadingTime(latestGeneratedAt) : person.last_seen_label ?? defaultElder.lastSeen,
       heartRate,
       oxygen: "--",
-      steps: "--",
-      sleep: "--",
+      steps: formatSteps(latestSteps),
+      sleep: formatBloodPressure(latestReading),
       initials: person.initials ?? initialsFromName(name),
     },
-    heartSamples: heartRate > 0 ? buildHeartSamples(heartRate) : defaultHeartSamples,
+    heartSamples,
+    fallRiskMetrics: buildFallRiskMetrics(latestFallRisk, person),
     medicationWeek: buildMedicationWeek(medications),
     alerts,
     deviceMetrics: [
       ["Connection", person.alert === "offline" ? "Disconnected" : "Connected"],
-      ["Battery", person.watch_battery_percent === null ? "--" : `${person.watch_battery_percent}%`],
-      ["Last sync", person.last_seen_label ?? "--"],
+      [
+        "Battery",
+        latestReading?.watch_battery_percent === null || latestReading?.watch_battery_percent === undefined
+          ? person.watch_battery_percent === null
+            ? "--"
+            : `${person.watch_battery_percent}%`
+          : `${latestReading.watch_battery_percent}%`,
+      ],
+      ["Last sync", latestGeneratedAt ? formatReadingTime(latestGeneratedAt) : person.last_seen_label ?? "--"],
+      ["Fall risk source", latestFallRisk?.source_app ?? "--"],
       ["Person ID", PERSON_ID],
     ],
   } satisfies AppData;
 }
 
 async function loadSabawoonData() {
-  const personRows = await fetchSupabaseRows<CarePersonRow>(
-    "care_people",
-    `select=*&id=eq.${PERSON_ID}&active=eq.true&limit=1`,
-  );
+  try {
+    const personRows = await fetchSupabaseRows<CarePersonRow>(
+      "care_people",
+      `select=*&id=eq.${PERSON_ID}&active=eq.true&limit=1`,
+    );
 
-  const person = personRows[0];
-  if (!person) return defaultAppData;
+    const person = personRows[0];
+    if (!person) return defaultAppData;
 
-  const [rules, medications] = await Promise.all([
-    fetchSupabaseRows<CareRuleRow>(
-      "care_rules",
-      `select=*&person_id=eq.${PERSON_ID}&order=created_at.desc`,
-    ),
-    fetchSupabaseRows<MedicationRow>(
-      "medications",
-      `select=*&elder_id=eq.${PERSON_ID}&order=created_at.asc`,
-    ),
-  ]);
+    const [rules, medications, biometrics, fallRiskObservations, careAlerts] = await Promise.all([
+      fetchSupabaseRows<CareRuleRow>(
+        "care_rules",
+        `select=*&person_id=eq.${PERSON_ID}&order=created_at.desc`,
+      ),
+      fetchSupabaseRows<MedicationRow>(
+        "medications",
+        `select=*&elder_id=eq.${PERSON_ID}&order=created_at.asc`,
+      ),
+      fetchSupabaseRows<BiometricsRow>(
+        "biometrics_data",
+        `select=*&person_id=eq.${PERSON_ID}&order=occurred_at.desc&limit=24`,
+      ),
+      fetchSupabaseRows<FallRiskObservationRow>(
+        "fall_risk_observations",
+        `select=*&person_id=eq.${PERSON_ID}&order=generated_at.desc&limit=80`,
+      ),
+      fetchSupabaseRows<CareAlertRow>(
+        "care_alerts",
+        `select=*&person_id=eq.${PERSON_ID}&status=eq.active&order=sort_order.asc,created_at.desc`,
+      ),
+    ]);
 
-  return mapLiveData(person, rules, medications);
+    return mapLiveData(person, careAlerts, rules, medications, biometrics, fallRiskObservations);
+  } catch {
+    return defaultAppData;
+  }
+}
+
+/** Resolve an active medication_missed care_alert for a person + date. */
+async function resolveMedicationMissedCareAlert(personId: string, scheduleDate: string) {
+  const headers = getSupabaseHeaders();
+  if (!headers) return;
+
+  try {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/care_alerts?person_id=eq.${personId}&alert_key=eq.medication_missed&status=eq.active&metric_value=eq.${scheduleDate}`,
+      {
+        method: "PATCH",
+        headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ status: "resolved", updated_at: new Date().toISOString() }),
+      },
+    );
+  } catch {
+    // Best-effort — the next poll will pick up the current state
+  }
+}
+
+/** Create a medication_missed care_alert if one doesn't already exist. */
+async function createMedicationMissedCareAlert(
+  personId: string,
+  personName: string,
+  scheduleDate: string,
+  pendingDoses: number,
+  totalDoses: number,
+) {
+  const headers = getSupabaseHeaders();
+  if (!headers) return;
+
+  try {
+    // Check for existing active alert
+    const existing = await fetch(
+      `${SUPABASE_URL}/rest/v1/care_alerts?person_id=eq.${personId}&alert_key=eq.medication_missed&status=eq.active&metric_value=eq.${scheduleDate}&select=id&limit=1`,
+      { headers },
+    );
+    const rows = await existing.json();
+    if (Array.isArray(rows) && rows.length > 0) return;
+
+    const dateLabel = new Date(scheduleDate + "T00:00:00").toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+
+    await fetch(`${SUPABASE_URL}/rest/v1/care_alerts`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({
+        alert_key: "medication_missed",
+        person_id: personId,
+        title: "Medication not administered",
+        signal_label: "Medication schedule",
+        severity: "warning",
+        status: "active",
+        summary: `${personName} has ${pendingDoses} of ${totalDoses} doses pending for ${dateLabel}.`,
+        metric_label: "Schedule date",
+        metric_value: scheduleDate,
+        triggered_label: "Missed",
+        next_step: "Review medication log and confirm with care team.",
+        sort_order: 10,
+      }),
+    });
+  } catch {
+    // Best-effort
+  }
+}
+
+/** Format a Date as YYYY-MM-DD. */
+function formatIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Scan past days in the medication week and create medication_missed alerts
+ * for any day that has scheduled doses but no existing alert.
+ */
+async function checkMissedMedicationsOnLoad(
+  personId: string,
+  personName: string,
+  medicationWeek: MedicationDay[],
+) {
+  const headers = getSupabaseHeaders();
+  if (!headers) return;
+
+  try {
+    // Load existing medication_missed alerts for this person
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/care_alerts?person_id=eq.${personId}&alert_key=eq.medication_missed&select=metric_value,status`,
+      { headers },
+    );
+    const existingAlerts = (await res.json()) as Array<{ metric_value: string; status: string }>;
+    const coveredDates = new Set(existingAlerts.map((a) => a.metric_value));
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentDayOfWeek = today.getDay();
+
+    for (const day of medicationWeek) {
+      if (day.doses.length === 0) continue;
+
+      let daysAgo = currentDayOfWeek - day.key;
+      if (daysAgo <= 0) daysAgo += 7;
+
+      const scheduleDate = new Date(today);
+      scheduleDate.setDate(scheduleDate.getDate() - daysAgo);
+      const dateStr = formatIsoDate(scheduleDate);
+
+      if (coveredDates.has(dateStr)) continue;
+
+      await createMedicationMissedCareAlert(
+        personId,
+        personName,
+        dateStr,
+        day.doses.length,
+        day.doses.length,
+      );
+    }
+  } catch {
+    // Best-effort
+  }
 }
 
 function HeartMark() {
@@ -572,8 +969,9 @@ function HeartMonitor({
   readonly elder: ElderProfile;
   readonly heartSamples: number[];
 }) {
-  const max = Math.max(...heartSamples);
-  const min = Math.min(...heartSamples);
+  const hasReadings = heartSamples.length > 0;
+  const max = hasReadings ? Math.max(...heartSamples) : 1;
+  const min = hasReadings ? Math.min(...heartSamples) : 0;
   const range = Math.max(max - min, 1);
 
   return (
@@ -581,7 +979,7 @@ function HeartMonitor({
       <View style={styles.monitorHeader}>
         <View>
           <Text style={styles.eyebrow}>Heartbeat monitor</Text>
-          <Text style={styles.heartRate}>{elder.heartRate}</Text>
+          <Text style={styles.heartRate}>{elder.heartRate > 0 ? elder.heartRate : "—"}</Text>
           <Text style={styles.heartRateUnit}>beats per minute</Text>
         </View>
         <View style={styles.livePill}>
@@ -590,19 +988,25 @@ function HeartMonitor({
         </View>
       </View>
 
-      <View style={styles.heartGraph}>
-        {heartSamples.map((sample, index) => {
-          const height = 28 + ((sample - min) / range) * 54;
-          return (
-            <View
-              key={`${sample}-${index}`}
-              style={[styles.heartBar, { height }]}
-            />
-          );
-        })}
-      </View>
+      {hasReadings ? (
+        <View style={styles.heartGraph}>
+          {heartSamples.map((sample, index) => {
+            const height = 28 + ((sample - min) / range) * 54;
+            return (
+              <View
+                key={`${sample}-${index}`}
+                style={[styles.heartBar, { height }]}
+              />
+            );
+          })}
+        </View>
+      ) : (
+        <View style={styles.emptyHeartGraph}>
+          <Text style={styles.emptyHeartText}>No live health readings yet.</Text>
+        </View>
+      )}
       <Text style={styles.monitorNote}>
-        Normal resting range for {elder.preferredName}: 62-92 bpm.
+        Heart-rate history is loaded from Supabase biometrics readings for {elder.preferredName}.
       </Text>
     </View>
   );
@@ -626,9 +1030,11 @@ function MetricTile({
 function CareView({
   elder,
   heartSamples,
+  fallRiskMetrics,
 }: {
   readonly elder: ElderProfile;
   readonly heartSamples: number[];
+  readonly fallRiskMetrics: string[][];
 }) {
   return (
     <View style={styles.stack}>
@@ -659,8 +1065,20 @@ function CareView({
       <View style={styles.metricGrid}>
         <MetricTile label="Oxygen" value={elder.oxygen} />
         <MetricTile label="Steps" value={elder.steps} />
-        <MetricTile label="Sleep" value={elder.sleep} />
+        <MetricTile label="Blood pressure" value={elder.sleep} />
         <MetricTile label="Next med" value="8:00 PM" />
+      </View>
+
+      <View style={styles.fallRiskCard}>
+        <Text style={styles.sectionTitle}>Fall risk</Text>
+        <Text style={styles.fallRiskBody}>
+          Seeded from Supabase fall_risk_observations for Sabawoon.
+        </Text>
+        <View style={styles.metricGrid}>
+          {fallRiskMetrics.map(([label, value]) => (
+            <MetricTile key={label} label={label} value={value} />
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -670,16 +1088,24 @@ function MedicationView({
   medicationWeek,
   selectedDay,
   administeredDays,
+  checkedDoses,
   onSelectDay,
-  onToggleDay,
+  onToggleDose,
 }: {
   readonly medicationWeek: MedicationDay[];
   readonly selectedDay: MedicationDay;
   readonly administeredDays: Record<number, boolean>;
+  readonly checkedDoses: Record<string, boolean>;
   readonly onSelectDay: (day: MedicationDay) => void;
-  readonly onToggleDay: (dayKey: number) => void;
+  readonly onToggleDose: (doseId: string, dayKey: number) => void;
 }) {
-  const selectedAdministered = administeredDays[selectedDay.key] ?? selectedDay.administered;
+  /** A day is "Given" only when it has doses and every dose is checked. */
+  const isDayComplete = (day: MedicationDay) => {
+    if (day.doses.length === 0) return false;
+    return day.doses.every((dose) => checkedDoses[dose.id] === true);
+  };
+
+  const selectedComplete = isDayComplete(selectedDay);
 
   return (
     <View style={styles.stack}>
@@ -688,7 +1114,7 @@ function MedicationView({
         <View style={styles.weekRow}>
           {medicationWeek.map((day) => {
             const active = selectedDay.key === day.key;
-            const done = administeredDays[day.key] ?? day.administered;
+            const done = isDayComplete(day);
             return (
               <Pressable
                 key={day.key}
@@ -696,20 +1122,17 @@ function MedicationView({
                 style={[styles.dayButton, active && styles.dayButtonActive]}
               >
                 <Text style={[styles.dayText, active && styles.dayTextActive]}>{day.short}</Text>
-                <Pressable
-                  onPress={() => onToggleDay(day.key)}
-                  style={[styles.checkbox, done && styles.checkboxChecked]}
-                >
+                <View style={[styles.checkbox, done && styles.checkboxChecked]}>
                   <Text style={[styles.checkboxText, done && styles.checkboxTextChecked]}>
                     {done ? "✓" : ""}
                   </Text>
-                </Pressable>
+                </View>
               </Pressable>
             );
           })}
         </View>
         <Text style={styles.weekHint}>
-          Tap a day for medication details. Tap the checkbox once administered.
+          Tap a day for medication details. Check off each medication once administered.
         </Text>
       </View>
 
@@ -719,14 +1142,14 @@ function MedicationView({
             <Text style={styles.eyebrow}>{selectedDay.date}</Text>
             <Text style={styles.detailTitle}>{selectedDay.label}</Text>
           </View>
-          <View style={[styles.statusPill, selectedAdministered && styles.statusPillDark]}>
+          <View style={[styles.statusPill, selectedComplete && styles.statusPillDark]}>
             <Text
               style={[
                 styles.statusPillText,
-                selectedAdministered && styles.statusPillTextDark,
+                selectedComplete && styles.statusPillTextDark,
               ]}
             >
-              {selectedAdministered ? "Given" : "Pending"}
+              {selectedComplete ? "Given" : "Pending"}
             </Text>
           </View>
         </View>
@@ -735,26 +1158,40 @@ function MedicationView({
           <Text style={styles.emptyText}>No medication scheduled for this day.</Text>
         ) : (
           <View style={styles.stack}>
-            {selectedDay.doses.map((dose) => (
-              <View key={dose.id} style={styles.medicationDose}>
-                <View style={styles.medicationDoseTop}>
-                  <Text style={styles.doseTime}>{dose.time}</Text>
-                  <Text style={styles.doseName}>{dose.name}</Text>
-                </View>
-                <Text style={styles.doseDescription}>{dose.description}</Text>
-                <View style={styles.doseMetaRow}>
-                  <View style={styles.doseMetaPill}>
-                    <Text style={styles.doseMetaLabel}>Dosage</Text>
-                    <Text style={styles.doseMetaValue}>{dose.dose}</Text>
+            {selectedDay.doses.map((dose) => {
+              const doseChecked = checkedDoses[dose.id] === true;
+              return (
+                <View key={dose.id} style={styles.medicationDose}>
+                  <View style={styles.medicationDoseTop}>
+                    <Pressable
+                      onPress={() => onToggleDose(dose.id, selectedDay.key)}
+                      style={[styles.doseCheckbox, doseChecked && styles.doseCheckboxChecked]}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: doseChecked }}
+                      accessibilityLabel={`Mark ${dose.name} as ${doseChecked ? "not given" : "given"}`}
+                    >
+                      <Text style={[styles.doseCheckboxText, doseChecked && styles.doseCheckboxTextChecked]}>
+                        {doseChecked ? "✓" : ""}
+                      </Text>
+                    </Pressable>
+                    <Text style={styles.doseTime}>{dose.time}</Text>
+                    <Text style={[styles.doseName, doseChecked && styles.doseNameChecked]}>{dose.name}</Text>
                   </View>
-                  <View style={styles.doseMetaPill}>
-                    <Text style={styles.doseMetaLabel}>Delivery</Text>
-                    <Text style={styles.doseMetaValue}>{dose.delivery}</Text>
+                  <Text style={styles.doseDescription}>{dose.description}</Text>
+                  <View style={styles.doseMetaRow}>
+                    <View style={styles.doseMetaPill}>
+                      <Text style={styles.doseMetaLabel}>Dosage</Text>
+                      <Text style={styles.doseMetaValue}>{dose.dose}</Text>
+                    </View>
+                    <View style={styles.doseMetaPill}>
+                      <Text style={styles.doseMetaLabel}>Delivery</Text>
+                      <Text style={styles.doseMetaValue}>{dose.delivery}</Text>
+                    </View>
                   </View>
+                  <Text style={styles.doseInstructions}>{dose.instructions}</Text>
                 </View>
-                <Text style={styles.doseInstructions}>{dose.instructions}</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
       </View>
@@ -765,9 +1202,9 @@ function MedicationView({
 function AlertsView({ alerts }: Readonly<{ alerts: AlertItem[] }>) {
   return (
     <View style={styles.stack}>
-      {alerts.map((alert) => (
+      {alerts.map((alert, index) => (
         <View
-          key={`${alert.title}-${alert.time}`}
+          key={`${alert.title}-${alert.time}-${index}`}
           style={[
             styles.alertCard,
             alert.tone === "urgent" && styles.alertUrgent,
@@ -801,7 +1238,7 @@ function DevicesView({
         <View style={styles.watchBody}>
           <View style={styles.watchStrapTop} />
           <View style={styles.watchFace}>
-            <Text style={styles.watchHeart}>{elder.heartRate}</Text>
+            <Text style={styles.watchHeart}>{elder.heartRate > 0 ? elder.heartRate : "—"}</Text>
             <Text style={styles.watchUnit}>bpm</Text>
           </View>
           <View style={styles.watchStrapBottom} />
@@ -844,25 +1281,53 @@ export default function App() {
   const [administeredDays, setAdministeredDays] = useState<Record<number, boolean>>(() =>
     Object.fromEntries(defaultAppData.medicationWeek.map((day) => [day.key, day.administered])),
   );
+  const [checkedDoses, setCheckedDoses] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let ignore = false;
+    let hasSeededMedication = false;
 
-    loadSabawoonData()
-      .then((data) => {
-        if (ignore) return;
-        setAppData(data);
-        setSelectedDay(data.medicationWeek[2] ?? data.medicationWeek[0]);
-        setAdministeredDays(
-          Object.fromEntries(data.medicationWeek.map((day) => [day.key, day.administered])),
-        );
-      })
-      .catch(() => {
-        if (!ignore) setAppData(defaultAppData);
-      });
+    const refresh = () => {
+      loadSabawoonData()
+        .then((data) => {
+          if (ignore) return;
+          setAppData(data);
+          if (!hasSeededMedication) {
+            setSelectedDay(data.medicationWeek[2] ?? data.medicationWeek[0]);
+            setAdministeredDays(
+              Object.fromEntries(data.medicationWeek.map((day) => [day.key, day.administered])),
+            );
+            // Seed per-dose checkboxes: mark all doses as checked for days that are already administered
+            const seededDoses: Record<string, boolean> = {};
+            for (const day of data.medicationWeek) {
+              if (day.administered) {
+                for (const dose of day.doses) {
+                  seededDoses[dose.id] = true;
+                }
+              }
+            }
+            setCheckedDoses(seededDoses);
+            hasSeededMedication = true;
+
+            // Check for missed medications and create alerts for past incomplete days
+            checkMissedMedicationsOnLoad(
+              PERSON_ID,
+              data.elder.name,
+              data.medicationWeek,
+            );
+          }
+        })
+        .catch(() => {
+          if (!ignore) setAppData(defaultAppData);
+        });
+    };
+
+    refresh();
+    const interval = setInterval(refresh, LIVE_REFRESH_MS);
 
     return () => {
       ignore = true;
+      clearInterval(interval);
     };
   }, []);
 
@@ -902,20 +1367,43 @@ export default function App() {
           </View>
 
           {activeTab === "care" ? (
-            <CareView elder={appData.elder} heartSamples={appData.heartSamples} />
+            <CareView
+              elder={appData.elder}
+              heartSamples={appData.heartSamples}
+              fallRiskMetrics={appData.fallRiskMetrics}
+            />
           ) : null}
           {activeTab === "medication" ? (
             <MedicationView
               medicationWeek={appData.medicationWeek}
               selectedDay={selectedDay}
               administeredDays={administeredDays}
+              checkedDoses={checkedDoses}
               onSelectDay={setSelectedDay}
-              onToggleDay={(dayKey) =>
-                setAdministeredDays((current) => ({
-                  ...current,
-                  [dayKey]: !current[dayKey],
-                }))
-              }
+              onToggleDose={(doseId, dayKey) => {
+                setCheckedDoses((current) => {
+                  const updated = { ...current, [doseId]: !current[doseId] };
+
+                  // Check if all doses for this day are now checked
+                  const day = appData.medicationWeek.find((d) => d.key === dayKey);
+                  if (day && day.doses.length > 0) {
+                    const allChecked = day.doses.every((dose) => updated[dose.id] === true);
+                    if (allChecked) {
+                      // Resolve the medication_missed alert for this day
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const currentDayOfWeek = today.getDay();
+                      let daysAgo = currentDayOfWeek - dayKey;
+                      if (daysAgo < 0) daysAgo += 7;
+                      const scheduleDate = new Date(today);
+                      scheduleDate.setDate(scheduleDate.getDate() - daysAgo);
+                      resolveMedicationMissedCareAlert(PERSON_ID, formatIsoDate(scheduleDate));
+                    }
+                  }
+
+                  return updated;
+                });
+              }}
             />
           ) : null}
           {activeTab === "alerts" ? <AlertsView alerts={appData.alerts} /> : null}
@@ -1165,6 +1653,21 @@ const styles = StyleSheet.create({
     flex: 1,
     opacity: 0.9,
   },
+  emptyHeartGraph: {
+    alignItems: "center",
+    backgroundColor: "rgba(248, 238, 217, 0.1)",
+    borderColor: "rgba(248, 238, 217, 0.2)",
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 104,
+    justifyContent: "center",
+    marginTop: 18,
+  },
+  emptyHeartText: {
+    color: colors.stone,
+    fontSize: 13,
+    fontWeight: "800",
+  },
   monitorNote: {
     color: colors.stone,
     fontSize: 13,
@@ -1198,6 +1701,20 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "900",
     marginTop: 7,
+  },
+  fallRiskCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.taupe,
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 12,
+    padding: 16,
+  },
+  fallRiskBody: {
+    color: colors.textSoft,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
   },
   weekCard: {
     backgroundColor: colors.surface,
@@ -1306,6 +1823,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
+  doseCheckbox: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.taupe,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    height: 26,
+    justifyContent: "center",
+    width: 26,
+  },
+  doseCheckboxChecked: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  doseCheckboxText: {
+    color: colors.surface,
+    fontSize: 15,
+    fontWeight: "900",
+    lineHeight: 18,
+  },
+  doseCheckboxTextChecked: {
+    color: colors.sand,
+  },
   doseTime: {
     backgroundColor: colors.sand,
     borderColor: colors.taupe,
@@ -1323,6 +1863,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: "900",
+  },
+  doseNameChecked: {
+    color: colors.muted,
+    textDecorationLine: "line-through",
   },
   doseDescription: {
     color: colors.textSoft,

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sendAlertTextNotification, sendMedicationReminderTextNotification } from "@/lib/notifications";
+import { resolveMedicationMissedAlert } from "@/lib/medication-alerts";
 import { updateDemoProfileNotificationNumber } from "@/lib/profiles";
 
 export type ProfileNumberActionState = {
@@ -15,6 +16,11 @@ export type TextNotificationActionState = {
 };
 
 export type MedicationReminderActionState = {
+  ok: boolean;
+  message: string;
+};
+
+export type MedicationComplianceActionState = {
   ok: boolean;
   message: string;
 };
@@ -85,6 +91,31 @@ export async function sendMedicationReminderAction(
     return {
       ok: false,
       message: formatNotificationError(error, "Unable to send medication reminder."),
+    };
+  }
+}
+
+
+export async function resolveMedicationMissedAction(
+  _previousState: MedicationComplianceActionState,
+  formData: FormData,
+): Promise<MedicationComplianceActionState> {
+  try {
+    const personId = String(formData.get("person_id") ?? "");
+    const scheduleDate = String(formData.get("schedule_date") ?? "");
+
+    if (!personId || !scheduleDate) {
+      return { ok: false, message: "Missing person_id or schedule_date." };
+    }
+
+    await resolveMedicationMissedAlert(personId, scheduleDate);
+    revalidatePath("/app");
+    revalidatePath(`/app/people/${personId}`);
+    return { ok: true, message: "Medication alert resolved." };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Unable to resolve medication alert.",
     };
   }
 }
