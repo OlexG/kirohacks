@@ -1,6 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 
-export type AppPage = "dashboard" | "roster" | "alerts" | "rules" | "profile" | "settings";
+export type AppPage = "dashboard" | "roster" | "alerts" | "rules" | "profile" | "settings" | "admin";
 
 const workspaceItems = [
   { label: "Dashboard", short: "D", href: "/app/dashboard", page: "dashboard" },
@@ -12,6 +13,7 @@ const workspaceItems = [
 const accountItems = [
   { label: "Profile", short: "P", href: "/app/profile", page: "profile" },
   { label: "Settings", short: "S", href: "/app/settings", page: "settings" },
+  { label: "Admin", short: "Ad", href: "/admin", page: "admin" },
 ] satisfies Array<{ label: string; short: string; href: string; page: AppPage }>;
 
 function SidebarLink({
@@ -45,7 +47,9 @@ export function AppSidebar({ activePage }: Readonly<{ activePage?: AppPage }>) {
   return (
     <aside className="care-sidebar" aria-label="Application navigation">
       <Link className="care-sidebar-brand" href="/" aria-label="Elsa home">
-        <span>El</span>
+        <span>
+          <Image src="/brand/elsa-icon.png" alt="" width={38} height={38} aria-hidden="true" />
+        </span>
         <span>
           <strong>Elsa</strong>
           <small>Elder-living safety assistant</small>

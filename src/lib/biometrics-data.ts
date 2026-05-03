@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { evaluateCareRulesForWatchAlert } from "@/lib/care-rule-evaluator";
 
 export const SABAWOON_HAKIMI_PERSON_ID = "person-sabawoon-hakimi";
 export const SABAWOON_HAKIMI_PERSON_NAME = "Sabawoon Hakimi";
@@ -103,6 +104,8 @@ export async function recordSabawoonWatchAlert(payload: WatchAlertPayload) {
   if (error) {
     throw new Error(`Unable to record biometrics data: ${error.message}`);
   }
+
+  await evaluateCareRulesForWatchAlert(insertPayload);
 
   return data;
 }

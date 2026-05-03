@@ -4,6 +4,16 @@ export type RuleSeverity = "info" | "review" | "urgent";
 export type RuleSignalOption = {
   key:
     | "fall_detected"
+    | "fall_risk_score"
+    | "instability_score"
+    | "instability_event"
+    | "repeated_instability_cluster"
+    | "walking_steadiness_score"
+    | "walking_asymmetry"
+    | "walking_double_support"
+    | "jerk_peak"
+    | "sway_rms"
+    | "attitude_change"
     | "heart_rate"
     | "resting_heart_rate"
     | "walking_heart_rate_average"
@@ -39,6 +49,146 @@ export const RULE_SIGNALS: RuleSignalOption[] = [
     thresholdLabel: "No threshold needed",
     requiresThreshold: false,
     reliability: "healthkit-event",
+  },
+  {
+    key: "fall_risk_score",
+    label: "Fall-risk score",
+    source: "Elsa fall-risk webhook",
+    detail:
+      "Uses the ruleRiskScore100 value sent by the watch fall-risk pipeline for each feature window.",
+    defaultOperator: "above",
+    operators: ["above", "below"],
+    unit: "/100",
+    defaultThreshold: 55,
+    thresholdLabel: "Risk score",
+    requiresThreshold: true,
+    reliability: "derived",
+  },
+  {
+    key: "instability_score",
+    label: "Instability score",
+    source: "Elsa fall-risk webhook",
+    detail:
+      "Uses ruleInstabilityScore100 from feature windows. This is the same score shown on Sabawoon's profile card.",
+    defaultOperator: "above",
+    operators: ["above", "below"],
+    unit: "/100",
+    defaultThreshold: 80,
+    thresholdLabel: "Instability score",
+    requiresThreshold: true,
+    reliability: "derived",
+  },
+  {
+    key: "instability_event",
+    label: "Instability event",
+    source: "Elsa fall-risk webhook",
+    detail:
+      "Triggers when the watch reports an instability_event message, including high-severity motion events.",
+    defaultOperator: "detected",
+    operators: ["detected"],
+    unit: null,
+    defaultThreshold: null,
+    thresholdLabel: "No threshold needed",
+    requiresThreshold: false,
+    reliability: "derived",
+  },
+  {
+    key: "repeated_instability_cluster",
+    label: "Repeated instability cluster",
+    source: "Elsa fall-risk risk flags",
+    detail:
+      "Triggers when the pipeline flags repeated instability events inside the current observation window.",
+    defaultOperator: "detected",
+    operators: ["detected"],
+    unit: null,
+    defaultThreshold: null,
+    thresholdLabel: "Risk flag detected",
+    requiresThreshold: false,
+    reliability: "derived",
+  },
+  {
+    key: "walking_steadiness_score",
+    label: "Walking steadiness score",
+    source: "Apple Watch mobility via webhook",
+    detail:
+      "Uses the walkingSteadinessScore01 mobility value when the watch sends it. Lower values indicate worse steadiness.",
+    defaultOperator: "below",
+    operators: ["above", "below"],
+    unit: "score",
+    defaultThreshold: 0.6,
+    thresholdLabel: "0-1 score",
+    requiresThreshold: true,
+    reliability: "watch-native",
+  },
+  {
+    key: "walking_asymmetry",
+    label: "Walking asymmetry",
+    source: "Apple Watch mobility via webhook",
+    detail:
+      "Uses walkingAsymmetryPct from mobility snapshots. Higher asymmetry can indicate gait changes worth review.",
+    defaultOperator: "above",
+    operators: ["above", "below"],
+    unit: "%",
+    defaultThreshold: 10,
+    thresholdLabel: "Percent asymmetry",
+    requiresThreshold: true,
+    reliability: "watch-native",
+  },
+  {
+    key: "walking_double_support",
+    label: "Double support time",
+    source: "Apple Watch mobility via webhook",
+    detail:
+      "Uses walkingDoubleSupportPct. Higher values can indicate cautious or unstable gait.",
+    defaultOperator: "above",
+    operators: ["above", "below"],
+    unit: "%",
+    defaultThreshold: 35,
+    thresholdLabel: "Percent double support",
+    requiresThreshold: true,
+    reliability: "watch-native",
+  },
+  {
+    key: "jerk_peak",
+    label: "Jerk peak",
+    source: "Watch motion features",
+    detail:
+      "Uses jerkPeakGPerS from motion windows. Spikes can accompany abrupt balance changes.",
+    defaultOperator: "above",
+    operators: ["above", "below"],
+    unit: "g/s",
+    defaultThreshold: 2,
+    thresholdLabel: "Peak jerk",
+    requiresThreshold: true,
+    reliability: "derived",
+  },
+  {
+    key: "sway_rms",
+    label: "Sway RMS",
+    source: "Watch motion features",
+    detail:
+      "Uses swayRmsDeg from motion windows to flag unusually high postural sway.",
+    defaultOperator: "above",
+    operators: ["above", "below"],
+    unit: "deg",
+    defaultThreshold: 8,
+    thresholdLabel: "Degrees",
+    requiresThreshold: true,
+    reliability: "derived",
+  },
+  {
+    key: "attitude_change",
+    label: "Attitude change",
+    source: "Watch motion features",
+    detail:
+      "Uses attitudeChangeDeg from motion windows to flag large orientation changes.",
+    defaultOperator: "above",
+    operators: ["above", "below"],
+    unit: "deg",
+    defaultThreshold: 45,
+    thresholdLabel: "Degrees",
+    requiresThreshold: true,
+    reliability: "derived",
   },
   {
     key: "heart_rate",

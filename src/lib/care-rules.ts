@@ -1,6 +1,10 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getCarePerson } from "@/lib/care-people";
 import {
+  evaluateCareRulesForLatestObservation,
+  resolveCareRuleAlert,
+} from "@/lib/care-rule-evaluator";
+import {
   findSignal,
   type RuleOperator,
   type RuleSeverity,
@@ -98,13 +102,29 @@ export async function createCareRule(input: CreateRuleInput) {
   if (error) {
     throw new Error(`Unable to create rule: ${error.message}`);
   }
+
+  await evaluateCareRulesForLatestObservation(person.id);
 }
 
 export async function setCareRuleActive(ruleId: string, active: boolean) {
   const supabase = getSupabaseAdmin();
-  const { error } = await supabase.from("care_rules").update({ active }).eq("id", ruleId);
+  const { data, error } = await supabase
+    .from("care_rules")
+    .update({ active })
+    .eq("id", ruleId)
+    .select("person_id")
+    .maybeSingle();
 
   if (error) {
     throw new Error(`Unable to update rule: ${error.message}`);
+  }
+
+  if (!active) {
+    await resolveCareRuleAlert(ruleId);
+    return;
+  }
+
+  if (data?.person_id) {
+    await evaluateCareRulesForLatestObservation(String(data.person_id));
   }
 }

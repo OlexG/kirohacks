@@ -1,9 +1,11 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
+import elsaIcon from "./assets/icon.png";
 import {
   Pressable,
   SafeAreaView,
   ScrollView,
+  Image,
   StyleSheet,
   Text,
   View,
@@ -536,7 +538,13 @@ async function loadSabawoonData() {
 function HeartMark() {
   return (
     <View style={styles.brandMark}>
-      <Text style={styles.brandMarkText}>S</Text>
+      <Image
+        source={elsaIcon}
+        style={styles.brandMarkImage}
+        resizeMode="cover"
+        alt=""
+        accessible={false}
+      />
     </View>
   );
 }
@@ -798,7 +806,7 @@ function DevicesView({
           </View>
           <View style={styles.watchStrapBottom} />
         </View>
-        <Text style={styles.watchTitle}>{elder.preferredName}'s Apple Watch</Text>
+        <Text style={styles.watchTitle}>{`${elder.preferredName}'s Apple Watch`}</Text>
         <Text style={styles.watchSubtitle}>
           Connected, syncing biometrics, fall detection, movement, and medication reminders.
         </Text>
@@ -963,28 +971,29 @@ const styles = StyleSheet.create({
   },
   brandMark: {
     alignItems: "center",
-    backgroundColor: colors.ink,
+    backgroundColor: colors.sand,
     borderRadius: 12,
     height: 38,
     justifyContent: "center",
+    overflow: "hidden",
     width: 38,
   },
-  brandMarkText: {
-    color: colors.sand,
-    fontSize: 18,
-    fontWeight: "900",
+  brandMarkImage: {
+    height: 38,
+    width: 38,
   },
   brandName: {
     color: colors.ink,
-    fontSize: 19,
-    fontWeight: "900",
-    lineHeight: 21,
+    fontSize: 15,
+    fontWeight: "800",
+    lineHeight: 16,
   },
   brandSub: {
     color: colors.textSoft,
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 2,
+    fontSize: 10,
+    fontWeight: "600",
+    lineHeight: 11,
+    marginTop: 1,
   },
   headerPill: {
     backgroundColor: colors.sand,

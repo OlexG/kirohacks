@@ -38,6 +38,8 @@ type ChartPoint = {
   value: number;
 };
 
+const INSTABILITY_FLASH_THRESHOLD = 80;
+
 function formatNullable(value: number | string | boolean | null | undefined, fallback = "--") {
   if (value === null || value === undefined || value === "") {
     return fallback;
@@ -173,6 +175,11 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
     (observation) => observation.message_type === "instability_event",
   );
   const highInstabilityEvents = recentInstabilityEvents.filter((observation) => observation.severity === "high");
+  const mobilitySpeed =
+    person.walking_speed_mps ??
+    latestNumber(fallRiskObservations, (observation) => observation.walking_speed_mps)
+      ?.walking_speed_mps ??
+    null;
   const cadence =
     latestNumber(fallRiskObservations, (observation) => observation.cadence_spm)?.cadence_spm ?? null;
   const latestObservation = fallRiskObservations[0] ?? null;
@@ -183,7 +190,14 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
       : "Awaiting webhook"
     : "Non live profile";
   const isRuleRiskHigh = ruleRiskScore !== null && ruleRiskScore > 50;
-  const isInstabilityHigh = instabilityScore !== null && instabilityScore > 50;
+  const isInstabilityCritical =
+    instabilityScore !== null && instabilityScore >= INSTABILITY_FLASH_THRESHOLD;
+  const criticalLiveFieldStyle = {
+    background: "#b84a3c",
+    borderColor: "#7f2118",
+    boxShadow:
+      "0 0 0 2px rgba(255, 255, 255, 0.52), 0 0 0 8px rgba(184, 74, 60, 0.34), 0 16px 34px rgba(184, 74, 60, 0.26)",
+  };
   const latestFallRiskSignature = [
     person.fall_risk_updated_at ?? "pending",
     latestObservation?.id ?? "no-observation",
@@ -271,7 +285,7 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                         </LiveMetricValue>
                       </div>
                       <div className={isRuleRiskHigh ? "is-alerting-live-field" : undefined}>
-                        <span>Rule risk</span>
+                        <span>Fall risk</span>
                         <LiveMetricValue compareKey={ruleRiskScore ?? "none"}>
                           {formatRiskScore(ruleRiskScore)}
                         </LiveMetricValue>
@@ -285,12 +299,15 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                 </article>
 
                 <section
-                  className={`person-orbit-card person-orbit-heart${isRuleRiskHigh ? " is-alerting-live-field" : ""}`}
-                  aria-label="Rule risk"
+                  className={`person-orbit-card person-orbit-heart${
+                    isRuleRiskHigh ? " is-alerting-live-field is-critical-live-field" : ""
+                  }`}
+                  style={isRuleRiskHigh ? criticalLiveFieldStyle : undefined}
+                  aria-label="Fall risk"
                 >
                   <header>
                     <div>
-                      <p className="care-detail-kicker">Rule Risk</p>
+                      <p className="care-detail-kicker">Fall Risk</p>
                       <LiveMetricValue compareKey={ruleRiskScore ?? "none"}>
                         {formatRiskScore(ruleRiskScore)}
                       </LiveMetricValue>
@@ -298,14 +315,19 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                     </div>
                     <div className="person-live-pill">
                       <span aria-hidden="true" />
-                      Rule
+                      Fall
                     </div>
                   </header>
                   <p>Transparent score from thresholds and baselines.</p>
                 </section>
 
                 <section
-                  className={`person-orbit-card person-orbit-motion${isInstabilityHigh ? " is-alerting-live-field" : ""}`}
+                  className={`person-orbit-card person-orbit-motion${
+                    isInstabilityCritical
+                      ? " is-alerting-live-field is-critical-live-field is-instability-critical-live-field"
+                      : ""
+                  }`}
+                  style={isInstabilityCritical ? criticalLiveFieldStyle : undefined}
                   aria-label="Instability"
                 >
                   <span>Instability</span>
@@ -319,19 +341,12 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                   </p>
                 </section>
 
-                <section
-                  className={`person-orbit-card person-orbit-rest${isInstabilityHigh ? " is-alerting-live-field" : ""}`}
-                  aria-label="Recent instability"
-                >
-                  <span>Recent instability</span>
-                  <LiveMetricValue
-                    compareKey={`${instabilityScore ?? "none"}:${recentInstabilityEvents.length}`}
-                  >
-                    {instabilityScore === null ? recentInstabilityEvents.length : formatRiskScore(instabilityScore)}
+                <section className="person-orbit-card person-orbit-rest" aria-label="Walking speed">
+                  <span>Speed</span>
+                  <LiveMetricValue compareKey={mobilitySpeed ?? "none"}>
+                    {mobilitySpeed === null ? "--" : mobilitySpeed.toFixed(2)}
                   </LiveMetricValue>
-                  <p>
-                    {recentInstabilityEvents.length} events · {highInstabilityEvents.length} high
-                  </p>
+                  <p>{mobilitySpeed === null ? "Speed pending" : "m/s walking speed"}</p>
                 </section>
               </div>
 
@@ -404,7 +419,7 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                     <span>{fallRiskObservations.length} samples</span>
                   </header>
                   <div className="person-chart-grid">
-                    <MiniLineChart label="Rule Risk" points={riskChart} />
+                    <MiniLineChart label="Fall Risk" points={riskChart} />
                     <MiniLineChart label="Instability" points={instabilityChart} />
                     <MiniLineChart label="Heart Rate" points={heartChart} alertThreshold={100} suffix=" bpm" />
                     <MiniLineChart label="Speed" points={mobilityChart} suffix=" m/s" />

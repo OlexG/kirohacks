@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { SABAWOON_HAKIMI_PERSON_ID } from "@/lib/biometrics-data";
+import { evaluateCareRulesForFallRiskObservation } from "@/lib/care-rule-evaluator";
 
 type JsonObject = Record<string, unknown>;
 
@@ -400,6 +401,7 @@ export async function recordSabawoonFallRiskEnvelope(payload: JsonObject) {
   }
 
   await updateLatestCarePersonState(observation);
+  await evaluateCareRulesForFallRiskObservation(observation);
 
   return { messageType: envelope.messageType, person_id: SABAWOON_HAKIMI_PERSON_ID, data };
 }

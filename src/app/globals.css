@@ -70,10 +70,46 @@ a {
 .brand {
   align-items: center;
   display: inline-flex;
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 780;
   gap: 10px;
   letter-spacing: 0;
+}
+
+.brand-icon {
+  border-radius: 8px;
+  display: block;
+  flex: 0 0 auto;
+  height: 38px;
+  object-fit: cover;
+  width: 38px;
+}
+
+.brand-copy,
+.care-sidebar-brand > span:last-child {
+  display: grid;
+  gap: 1px;
+  line-height: 1;
+}
+
+.brand-copy strong,
+.brand-copy small {
+  display: block;
+}
+
+.brand-copy strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 780;
+  line-height: 1.05;
+}
+
+.brand-copy small {
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 620;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .brand-mark {
@@ -1791,14 +1827,22 @@ a {
 .care-sidebar-mark,
 .care-sidebar-brand > span:first-child {
   align-items: center;
-  background: var(--care-primary);
+  background: var(--care-surface-alt);
   border-radius: 12px;
-  color: var(--care-surface-alt);
+  color: var(--care-primary);
   display: inline-flex;
   flex: 0 0 auto;
   height: 38px;
   justify-content: center;
+  overflow: hidden;
   width: 38px;
+}
+
+.care-sidebar-brand > span:first-child img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
 }
 
 .care-sidebar-mark .care-heart-glyph {
@@ -1816,16 +1860,18 @@ a {
 }
 
 .care-sidebar-brand strong {
-  font-size: 18px;
-  font-weight: 860;
+  font-size: 15px;
+  font-weight: 720;
   line-height: 1.05;
 }
 
 .care-sidebar-brand small {
   color: var(--care-secondary);
-  font-size: 12px;
-  font-weight: 720;
-  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 560;
+  line-height: 1.1;
+  margin-top: 1px;
+  white-space: nowrap;
 }
 
 .care-sidebar-nav {
@@ -4480,8 +4526,8 @@ button.care-sidebar-link {
 
 .care-sidebar-brand strong {
   color: #fff8ec;
-  font-size: 17px;
-  font-weight: 780;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .care-sidebar-brand small,
@@ -8257,7 +8303,8 @@ button.care-sidebar-link {
 
 .rules-list-panel .stored-rule {
   align-items: stretch;
-  grid-template-columns: minmax(0, 1fr) 36px;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  min-height: 96px;
   padding: 0;
   position: relative;
 }
@@ -8268,6 +8315,7 @@ button.care-sidebar-link {
 }
 
 .rule-open-button {
+  align-items: flex-start;
   appearance: none;
   background: transparent;
   border: 0;
@@ -8280,7 +8328,7 @@ button.care-sidebar-link {
   grid-row: 1;
   grid-template-columns: 34px minmax(0, 1fr);
   min-width: 0;
-  padding: 12px 0 11px 14px;
+  padding: 14px 8px 14px 14px;
   text-align: left;
   width: 100%;
 }
@@ -8300,7 +8348,8 @@ button.care-sidebar-link {
 
 .rule-open-button .stored-rule-main {
   border-radius: 5px;
-  display: block;
+  display: grid;
+  gap: 7px;
   min-width: 0;
 }
 
@@ -8311,7 +8360,40 @@ button.care-sidebar-link {
   grid-row: 1;
   justify-content: center;
   justify-self: end;
-  padding: 12px 14px 0 0;
+  padding: 14px 12px 0 0;
+}
+
+.rules-list-panel .stored-rule-title {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rules-list-panel .stored-rule-title h3,
+.rules-list-panel .stored-rule p {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.rules-list-panel .stored-rule p {
+  line-height: 1.35;
+  margin-top: 0;
+}
+
+.rules-list-panel .stored-rule-meta {
+  gap: 6px;
+  margin-top: 0;
+}
+
+.rules-list-panel .rule-meta-pill {
+  line-height: 1.2;
+  min-height: 24px;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .rules-diagram-panel {
@@ -8824,6 +8906,34 @@ button.care-sidebar-link {
   50% {
     background-color: var(--live-field-pulse-bg-peak, rgba(79, 127, 99, 0.08));
     opacity: 1;
+  }
+}
+
+@keyframes instability-critical-flash {
+  0%, 100% {
+    filter: saturate(1.12) brightness(1);
+    box-shadow:
+      0 0 0 2px rgba(255, 255, 255, 0.52),
+      0 0 0 6px rgba(184, 74, 60, 0.34),
+      0 16px 34px rgba(184, 74, 60, 0.26);
+  }
+  50% {
+    filter: saturate(1.55) brightness(1.16);
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.92),
+      0 0 0 15px rgba(255, 45, 32, 0.38),
+      0 20px 42px rgba(184, 74, 60, 0.42);
+  }
+}
+
+@keyframes instability-critical-overlay-flash {
+  0%, 100% {
+    background-color: rgba(255, 29, 16, 0.12);
+    opacity: 0.34;
+  }
+  50% {
+    background-color: rgba(255, 29, 16, 0.62);
+    opacity: 0.9;
   }
 }
 
@@ -10406,6 +10516,9 @@ body[data-profile-chart-state="updated"] .person-mini-chart svg path:last-child 
 .person-focus-metrics div,
 .person-profile-data-grid div:has(.live-metric-value),
 .person-orbit-card:has(.live-metric-value) {
+  --live-field-pulse-bg-rest: rgba(79, 127, 99, 0);
+  --live-field-pulse-bg-peak: rgba(79, 127, 99, 0.08);
+  --live-field-pulse-border: rgba(79, 127, 99, 0.42);
   border: 1px solid var(--care-border-soft);
   position: relative;
 }
@@ -10413,9 +10526,6 @@ body[data-profile-chart-state="updated"] .person-mini-chart svg path:last-child 
 .person-focus-metrics div::after,
 .person-profile-data-grid div:has(.live-metric-value)::after,
 .person-orbit-card:has(.live-metric-value)::after {
-  --live-field-pulse-bg-rest: rgba(79, 127, 99, 0);
-  --live-field-pulse-bg-peak: rgba(79, 127, 99, 0.08);
-  --live-field-pulse-border: rgba(79, 127, 99, 0.42);
   animation: live-field-idle-pulse 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   background-color: rgba(79, 127, 99, 0);
   border: 1px solid var(--live-field-pulse-border);
@@ -10428,22 +10538,63 @@ body[data-profile-chart-state="updated"] .person-mini-chart svg path:last-child 
 }
 
 .is-alerting-live-field {
-  border-color: rgba(184, 74, 60, 0.32);
-}
-
-.is-alerting-live-field::after {
   --live-field-pulse-bg-rest: rgba(184, 74, 60, 0.02);
   --live-field-pulse-bg-peak: rgba(184, 74, 60, 0.16);
   --live-field-pulse-border: rgba(184, 74, 60, 0.58);
+  border-color: rgba(184, 74, 60, 0.32);
+}
+
+.person-orbit-card.is-critical-live-field,
+.person-orbit-card.is-instability-critical-live-field {
+  --live-field-pulse-bg-rest: rgba(255, 29, 16, 0.12);
+  --live-field-pulse-bg-peak: rgba(255, 29, 16, 0.62);
+  --live-field-pulse-border: rgba(255, 255, 255, 0.82);
+  animation: instability-critical-flash 520ms steps(2, end) infinite !important;
+  background: #b84a3c !important;
+  border-color: #7f2118 !important;
+  color: #fff8f5 !important;
+}
+
+.person-orbit-card.is-critical-live-field > *,
+.person-orbit-card.is-instability-critical-live-field > * {
+  position: relative;
+  z-index: 1;
+}
+
+.person-orbit-card.is-critical-live-field > span,
+.person-orbit-card.is-critical-live-field > strong,
+.person-orbit-card.is-critical-live-field p,
+.person-orbit-card.is-instability-critical-live-field > span,
+.person-orbit-card.is-instability-critical-live-field > strong,
+.person-orbit-card.is-instability-critical-live-field p {
+  color: #fff8f5 !important;
+}
+
+.person-orbit-card.is-critical-live-field::after,
+.person-orbit-card.is-instability-critical-live-field::after {
+  animation: instability-critical-overlay-flash 520ms steps(2, end) infinite !important;
+  background-color: rgba(255, 29, 16, 0.62) !important;
+  border: 2px solid rgba(255, 255, 255, 0.78) !important;
+  opacity: 0.9;
+  z-index: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .profile-live-orb,
+  .person-orbit-card.is-critical-live-field,
+  .person-orbit-card.is-instability-critical-live-field,
   body[data-profile-chart-state="updated"] .person-mini-chart svg path:last-child,
   .person-focus-metrics div::after,
   .person-profile-data-grid div:has(.live-metric-value)::after,
   .person-orbit-card:has(.live-metric-value)::after {
     animation: none;
+  }
+
+  .person-orbit-card.is-critical-live-field,
+  .person-orbit-card.is-instability-critical-live-field {
+    background: #b84a3c !important;
+    border-color: #7f2118 !important;
+    filter: none;
   }
 }
 
@@ -10851,6 +11002,104 @@ body[data-profile-chart-state="updated"] .person-mini-chart svg path:last-child 
   color: #9b2c2c;
 }
 
+.admin-detail-view {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(260px, 0.42fr) minmax(0, 1fr);
+}
+
+.admin-reset-card,
+.admin-notification-card {
+  border-radius: 8px;
+  min-height: 0;
+}
+
+.admin-reset-card form {
+  margin-top: auto;
+}
+
+.admin-reset-card .care-detail-action {
+  width: fit-content;
+}
+
+.admin-stat-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-stat-grid div {
+  background: rgba(214, 200, 178, 0.2);
+  border: 1px solid var(--care-border-soft);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.admin-stat-grid span,
+.admin-notification-row span,
+.admin-notification-row small,
+.admin-notification-row time {
+  color: var(--care-secondary);
+  display: block;
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.admin-stat-grid strong {
+  color: var(--care-primary);
+  display: block;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 22px;
+  font-weight: 850;
+  margin-top: 4px;
+}
+
+.admin-notification-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-notification-row {
+  align-items: start;
+  background: var(--care-surface-alt);
+  border: 1px solid var(--care-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, auto);
+  padding: 12px;
+}
+
+.admin-notification-row.urgent {
+  box-shadow: 4px 0 0 #b42318 inset;
+}
+
+.admin-notification-row.warning {
+  box-shadow: 4px 0 0 #b86e16 inset;
+}
+
+.admin-notification-row.info {
+  box-shadow: 4px 0 0 #2b6cb0 inset;
+}
+
+.admin-notification-row strong {
+  color: var(--care-primary);
+  display: block;
+  font-size: 14px;
+  font-weight: 820;
+  line-height: 1.25;
+  margin-top: 4px;
+}
+
+.admin-notification-row small,
+.admin-notification-row time {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  text-transform: none;
+}
+
 @media (max-width: 1180px) {
   .person-medication-list {
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -10858,6 +11107,15 @@ body[data-profile-chart-state="updated"] .person-mini-chart svg path:last-child 
 }
 
 @media (max-width: 760px) {
+  .admin-detail-view,
+  .admin-notification-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .person-week-card header {
     align-items: flex-start;
     flex-direction: column;

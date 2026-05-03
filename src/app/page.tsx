@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 const seniors = [
   {
     name: "Eleanor",
@@ -256,10 +258,18 @@ export default function Home() {
     <main className="home-page min-h-screen overflow-hidden">
       <header className="site-header">
         <a className="brand" href="#top" aria-label="Home">
-          <span className="brand-mark">
-            <HeartIcon />
+          <Image
+            className="brand-icon"
+            src="/brand/elsa-icon.png"
+            alt=""
+            width={38}
+            height={38}
+            priority
+          />
+          <span className="brand-copy">
+            <strong>Elsa</strong>
+            <small>Elder-living safety assistant</small>
           </span>
-          <span>Elsa</span>
         </a>
         <nav aria-label="Primary navigation">
           <a href="/app/dashboard">Demo</a>
@@ -392,10 +402,17 @@ export default function Home() {
         <div className="footer-columns">
           <div>
             <a className="brand" href="#top" aria-label="Home">
-              <span className="brand-mark">
-                <HeartIcon />
+              <Image
+                className="brand-icon"
+                src="/brand/elsa-icon.png"
+                alt=""
+                width={38}
+                height={38}
+              />
+              <span className="brand-copy">
+                <strong>Elsa</strong>
+                <small>Elder-living safety assistant</small>
               </span>
-              <span>Elsa</span>
             </a>
             <p>Elder-living safety assistance for seniors, families, and professional care teams.</p>
           </div>

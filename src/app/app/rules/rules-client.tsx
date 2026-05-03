@@ -17,8 +17,8 @@ import {
 } from "./actions";
 
 const operatorLabels: Record<RuleOperator, string> = {
-  above: "Above",
-  below: "Below",
+  above: "At/above",
+  below: "At/below",
   equals: "Equals",
   detected: "Detected",
   not_seen_for: "Not seen for",
