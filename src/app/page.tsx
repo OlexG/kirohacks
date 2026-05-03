@@ -37,46 +37,46 @@ const seniors = [
 
 const features = [
   {
-    label: "Fall detection",
-    title: "Know the moment someone needs help",
-    body: "Apple Watch fall events surface immediately in the care dashboard, with severity, location context, and acknowledgement status.",
+    label: "Fall risk and mobility",
+    title: "Catch instability before it becomes a crisis",
+    body: "Watch and HealthKit signals feed fall-risk scores, gait changes, location snapshots, and hard-fall events into the same care view.",
     accent: "tone-ink",
-    metric: "12 sec",
-    metricLabel: "median alert time",
+    metric: "2,500+",
+    metricLabel: "fall-risk observations",
   },
   {
-    label: "Vitals monitoring",
-    title: "Spot concerning health changes sooner",
-    body: "Heart rate, movement, and watch connectivity are summarized into simple safety states for every senior in your care.",
+    label: "Care operations",
+    title: "Keep the response queue impossible to miss",
+    body: "Active alerts stay visible with the person, signal, metric, next step, watch status, and acknowledgement state close at hand.",
     accent: "tone-sand",
-    metric: "24/7",
-    metricLabel: "watch signal review",
+    metric: "Live",
+    metricLabel: "roster and alert refresh",
   },
   {
-    label: "Custom rules",
-    title: "Tune alerts around each person",
-    body: "Create thresholds for heart rate, inactivity, night hours, offline devices, and escalation paths for different caretakers.",
+    label: "Rule diagrams",
+    title: "Turn raw watch data into care-team actions",
+    body: "Create and pause rules for fall events, instability, walking steadiness, heart rate, steps, offline watches, and medication follow-up.",
     accent: "tone-stone",
-    metric: "4",
-    metricLabel: "alert levels",
+    metric: "16",
+    metricLabel: "configured care rules",
   },
 ];
 
 const timeline = [
   {
     time: "Today",
-    title: "Add your care list",
-    items: ["Invite caretakers", "Create senior profiles", "Assign emergency contacts"],
+    title: "Review the live roster",
+    items: ["See every senior by care state", "Check watch batteries and last-seen status", "Open profile-level context"],
   },
   {
-    time: "Day 3",
+    time: "Next",
     title: "Connect safety signals",
-    items: ["Import Apple Watch-style data", "Review baseline vitals", "Confirm notification routing"],
+    items: ["Ingest watch alert webhooks", "Track fall-risk and gait observations", "Capture location when the watch reports it"],
   },
   {
-    time: "Day 7",
-    title: "Run a safer routine",
-    items: ["Customize alert rules", "Track acknowledgement", "Review weekly safety summaries"],
+    time: "Then",
+    title: "Tune the response workflow",
+    items: ["Create diagram-based monitoring rules", "Surface missed medication alerts", "Route urgent events to the right caretaker"],
   },
 ];
 
@@ -119,7 +119,7 @@ function DashboardPreview() {
       <div className="dashboard-topbar">
         <div>
           <p className="eyebrow">Care overview</p>
-          <h2>4 seniors monitored</h2>
+          <h2>Live senior roster</h2>
         </div>
         <div className="live-pill">
           <span />
@@ -151,8 +151,8 @@ function DashboardPreview() {
             <AlertIcon />
             <span>Urgent alert</span>
           </div>
-          <h3>Fall detected: Mae</h3>
-          <p>Apple Watch reported a hard fall at 10:42 AM. No response received yet.</p>
+          <h3>Fall risk elevated</h3>
+          <p>Watch data reported instability, location context, and no caretaker acknowledgement yet.</p>
           <div className="response-row">
             <span>Unacknowledged</span>
             <strong>2 min</strong>
@@ -162,15 +162,15 @@ function DashboardPreview() {
 
       <div className="rules-strip" aria-label="Custom alert rules">
         <div>
-          <span>Heart rate over 115</span>
+          <span>Heart rate at/above 115</span>
           <strong>Arthur</strong>
         </div>
         <div>
-          <span>No movement for 45 min</span>
-          <strong>Eleanor</strong>
+          <span>Instability score over 80</span>
+          <strong>Mae</strong>
         </div>
         <div>
-          <span>Watch offline</span>
+          <span>Watch offline after 30 min</span>
           <strong>Sam</strong>
         </div>
       </div>
@@ -191,16 +191,16 @@ function MiniProductPanel({
           <span>Alert queue</span>
         </div>
         <div className="queue-item urgent">
-          <strong>Mae fell in the kitchen</strong>
+          <strong>Instability score critical</strong>
           <span>Needs acknowledgement</span>
         </div>
         <div className="queue-item warning">
-          <strong>Arthur heart rate high</strong>
-          <span>118 bpm for 6 minutes</span>
+          <strong>Medication not administered</strong>
+          <span>Review the medication log</span>
         </div>
         <div className="queue-item stable">
-          <strong>Eleanor check-in complete</strong>
-          <span>Normal movement pattern</span>
+          <strong>Watch location received</strong>
+          <span>Accuracy and speed attached</span>
         </div>
       </div>
     );
@@ -222,8 +222,8 @@ function MiniProductPanel({
           <span className="bar h-24 urgent" />
         </div>
         <div className="vital-summary">
-          <strong>3 readings outside normal range</strong>
-          <span>Across 4 monitored seniors</span>
+          <strong>Mobility and heart-rate signals</strong>
+          <span>Reviewed across the active roster</span>
         </div>
       </div>
     );
@@ -237,17 +237,17 @@ function MiniProductPanel({
       </div>
       <div className="rule-line">
         <span>If</span>
-        <strong>heart rate</strong>
+        <strong>instability score</strong>
         <span>is above</span>
-        <strong>115 bpm</strong>
+        <strong>80/100</strong>
       </div>
       <div className="rule-line">
         <span>Then</span>
-        <strong>notify primary caretaker</strong>
+        <strong>create urgent alert</strong>
       </div>
       <div className="rule-line">
-        <span>Escalate after</span>
-        <strong>3 minutes</strong>
+        <span>Route to</span>
+        <strong>care team</strong>
       </div>
     </div>
   );
@@ -281,21 +281,21 @@ export default function Home() {
           <p className="announcement">Elsa: Elder-living safety assistant</p>
           <h1>A real-time safety assistant for seniors and the people who care for them</h1>
           <p>
-            Monitor fall events, heart rate changes, watch connectivity, and custom safety rules
-            from one calm caretaker workspace.
+            Monitor fall risk, mobility changes, heart-rate events, watch connectivity, medication
+            follow-up, and custom safety rules from one calm caretaker workspace.
           </p>
           <div className="hero-actions">
             <a className="primary-button" href="/app/dashboard">
-              Demo
+              Open demo
             </a>
             <a className="secondary-button" href="#platform">
               How it works
             </a>
           </div>
           <div className="trust-row" aria-label="Product highlights">
-            <span>Real-time alerts</span>
-            <span>Custom thresholds</span>
-            <span>Care team handoff</span>
+            <span>Live care dashboard</span>
+            <span>Rule-based escalation</span>
+            <span>Medication and mobility context</span>
           </div>
         </div>
         <div id="app" className="hero-visual" aria-label="Safety dashboard preview">
@@ -316,8 +316,8 @@ export default function Home() {
           <p className="eyebrow">Get to know Elsa</p>
           <h2>One workspace for every care signal</h2>
           <p>
-            Give caretakers a focused view of Apple Watch events, senior status, and the alerts
-            that need a human response.
+            Give caretakers a focused view of active alerts, watch status, fall-risk observations,
+            profile context, medications, and rules that need a human response.
           </p>
         </div>
         <div className="feature-stack">
@@ -355,21 +355,24 @@ export default function Home() {
           <h2>Urgent events stay visible until someone responds</h2>
           <p>
             Each alert keeps the critical context close: who it affects, what triggered it, when it
-            happened, and whether a caretaker has acknowledged it.
+            happened, what to do next, and whether a caretaker has acknowledged it.
           </p>
           <div className="check-list">
             <span>Fall detection alerts</span>
-            <span>Heart rate threshold alerts</span>
+            <span>Fall-risk and gait alerts</span>
+            <span>Heart-rate and step rules</span>
             <span>Watch offline alerts</span>
-            <span>Inactivity alerts</span>
+            <span>Missed medication alerts</span>
+            <span>Location snapshots</span>
+            <span>Care-team next steps</span>
           </div>
         </div>
       </section>
 
       <section id="setup" className="timeline-section">
         <div className="section-heading">
-          <p className="eyebrow">Launch plan</p>
-          <h2>Go from idea to working demo quickly</h2>
+          <p className="eyebrow">Operational flow</p>
+          <h2>Go from signal to response without losing context</h2>
         </div>
         <div className="timeline-grid">
           {timeline.map((step) => (
@@ -387,14 +390,14 @@ export default function Home() {
       <section id="demo" className="demo-section">
         <div>
           <p className="eyebrow">Care team ready</p>
-          <h2>Make the first version feel real</h2>
+          <h2>Open the working care operations demo</h2>
           <p>
-            Start with Apple Watch-style sample data, then connect live HealthKit workflows once
-            the product shape is clear.
+            Explore the live roster, active alert room, person profiles, medication schedule, and
+            diagram-based monitoring rules already wired into the app.
           </p>
         </div>
         <a className="primary-button" href="/app/dashboard">
-          Book demo
+          Open demo
         </a>
       </section>
 
@@ -414,7 +417,9 @@ export default function Home() {
                 <small>Elder-living safety assistant</small>
               </span>
             </a>
-            <p>Elder-living safety assistance for seniors, families, and professional care teams.</p>
+            <p>
+              Elder-living safety operations for seniors, families, and professional care teams.
+            </p>
           </div>
           <div>
             <h3>Platform</h3>
@@ -427,6 +432,7 @@ export default function Home() {
             <a href="#alerts">Falls</a>
             <a href="#alerts">Heart rate</a>
             <a href="#alerts">Movement</a>
+            <a href="#alerts">Medications</a>
           </div>
           <div>
             <h3>Care</h3>
