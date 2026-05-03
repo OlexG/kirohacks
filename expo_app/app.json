@@ -12,6 +12,14 @@
       "resizeMode": "contain",
       "backgroundColor": "#F5F3EE"
     },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Elsa to scan QR codes for care profiles."
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.safely-care"

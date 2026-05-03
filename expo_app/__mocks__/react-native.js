@@ -1,4 +1,5 @@
 module.exports = {
+  Modal: "Modal",
   Pressable: "Pressable",
   SafeAreaView: "SafeAreaView",
   ScrollView: "ScrollView",

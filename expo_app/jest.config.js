@@ -20,7 +20,9 @@ module.exports = {
   },
   moduleNameMapper: {
     "\\.(png|jpg|jpeg|gif|svg)$": "<rootDir>/__mocks__/fileMock.js",
+    "^expo-camera$": "<rootDir>/__mocks__/expo-camera.js",
     "^react-native$": "<rootDir>/__mocks__/react-native.js",
+    "^react-native-maps$": "<rootDir>/__mocks__/react-native-maps.js",
     "^expo-status-bar$": "<rootDir>/__mocks__/expo-status-bar.js",
   },
 };

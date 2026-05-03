@@ -1,7 +1,10 @@
 import { StatusBar } from "expo-status-bar";
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import { useEffect, useMemo, useState } from "react";
 import elsaIcon from "./assets/icon.png";
+import sabawoonPhoto from "./assets/people/sabawoon-hakimi.png";
 import {
+  Modal,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -9,7 +12,9 @@ import {
   StyleSheet,
   Text,
   View,
+  type ImageSourcePropType,
 } from "react-native";
+import MapView, { Marker } from "react-native-maps";
 
 type TabKey = "care" | "medication" | "alerts" | "devices";
 type AlertTone = "urgent" | "warning" | "info";
@@ -51,7 +56,7 @@ type ElderProfile = {
   steps: string;
   sleep: string;
   initials: string;
-  avatar: string | null;
+  avatar: ImageSourcePropType | null;
 };
 
 type AlertItem = {
@@ -65,9 +70,21 @@ type AppData = {
   elder: ElderProfile;
   heartSamples: number[];
   fallRiskMetrics: string[][];
+  mapLocation: MapLocationSnapshot | null;
   medicationWeek: MedicationDay[];
   alerts: AlertItem[];
   deviceMetrics: string[][];
+};
+
+type MapLocationSnapshot = {
+  latitude: number;
+  longitude: number;
+  horizontalAccuracyM: number | null;
+  speedMps: number | null;
+  courseDeg: number | null;
+  timestamp: string | null;
+  source: string | null;
+  observationId: string;
 };
 
 type CarePersonRow = {
@@ -196,6 +213,15 @@ type FallRiskObservationRow = {
   altitude_delta_m: number | null;
   floors_ascended: number | null;
   floors_descended: number | null;
+  location_latitude: number | null;
+  location_longitude: number | null;
+  location_horizontal_accuracy_m: number | null;
+  location_altitude_m: number | null;
+  location_vertical_accuracy_m: number | null;
+  location_speed_mps: number | null;
+  location_course_deg: number | null;
+  location_timestamp: string | null;
+  location_source: string | null;
   risk_flags: Array<{ code?: string; severity?: string; value?: unknown }> | unknown[];
   payload: Record<string, unknown>;
   created_at: string;
@@ -213,7 +239,16 @@ const colors = {
   white: "#FFFCF8",
 };
 
-const PERSON_ID = "person-sabawoon-hakimi";
+const DEFAULT_PERSON_ID = "person-sabawoon-hakimi";
+const SABAWOON_PUBLIC_AVATAR_PATH = "/people/sabawoon-hakimi.png";
+const bundledAvatarByPath: Record<string, ImageSourcePropType> = {
+  [SABAWOON_PUBLIC_AVATAR_PATH]: sabawoonPhoto,
+};
+const avatarPathByPersonId: Record<string, string> = {
+  [DEFAULT_PERSON_ID]: SABAWOON_PUBLIC_AVATAR_PATH,
+};
+const MAP_LATITUDE_DELTA = 0.006;
+const MAP_LONGITUDE_DELTA = 0.006;
 const LIVE_REFRESH_MS = 3500;
 const SUPABASE_URL =
   process.env?.EXPO_PUBLIC_SUPABASE_URL ?? process.env?.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -399,7 +434,7 @@ const defaultAlerts: AlertItem[] = [
   {
     tone: "info",
     title: "Scoped person",
-    body: `This app is filtered to ${PERSON_ID}.`,
+    body: `This app is filtered to ${DEFAULT_PERSON_ID}.`,
     time: "Live seed",
   },
 ];
@@ -420,6 +455,7 @@ const defaultAppData: AppData = {
     ["Steadiness", "--"],
     ["Walking speed", "--"],
   ],
+  mapLocation: null,
   medicationWeek: defaultMedicationWeek,
   alerts: defaultAlerts,
   deviceMetrics: defaultDeviceMetrics,
@@ -517,23 +553,52 @@ function formatNullableNumber(value: number | null | undefined, suffix = "") {
   return value === null || value === undefined ? "--" : `${Number(value.toFixed(2))}${suffix}`;
 }
 
-function isValidAvatarUrl(url: string | null | undefined): url is string {
-  return typeof url === "string" && /^(https?:\/\/|data:image\/|\/)/.test(url);
+function isProfileImageSrc(src: string) {
+  return /^(https?:\/\/|data:image\/|\/)/.test(src);
+}
+
+function normalizeWebBaseUrl(baseUrl: string) {
+  return baseUrl.trim().replace(/\/$/, "");
 }
 
 /**
  * Resolve an avatar string to an absolute URL that React Native's Image component can load.
  * Relative paths (starting with `/` but not `//`) are prepended with the webapp base URL.
  * Absolute URLs, data URIs, and protocol-relative URLs pass through unchanged.
- * Null, empty strings, and unrecognized formats return null (triggering initials fallback).
+ * Null, empty strings, unrecognized formats, and base-less relative paths return null.
  */
 export function resolveAvatarUrl(avatar: string | null, baseUrl: string = WEBAPP_BASE_URL): string | null {
-  if (avatar === null || avatar === "") return null;
-  if (avatar.startsWith("http://") || avatar.startsWith("https://")) return avatar;
-  if (avatar.startsWith("data:image/")) return avatar;
-  if (avatar.startsWith("//")) return avatar;
-  if (avatar.startsWith("/")) return baseUrl + avatar;
+  const src = avatar?.trim();
+  if (!src || !isProfileImageSrc(src)) return null;
+  if (src.startsWith("http://") || src.startsWith("https://")) return src;
+  if (src.startsWith("data:image/")) return src;
+  if (src.startsWith("//")) return src;
+
+  const normalizedBaseUrl = normalizeWebBaseUrl(baseUrl);
+  if (!normalizedBaseUrl) return null;
+
+  if (src.startsWith("/")) return normalizedBaseUrl + src;
   return null;
+}
+
+function resolveAvatarSource(
+  avatar: string | null,
+  personId: string,
+  baseUrl: string = WEBAPP_BASE_URL,
+): ImageSourcePropType | null {
+  const src = avatar?.trim();
+
+  if (src?.startsWith("/") && !src.startsWith("//") && bundledAvatarByPath[src]) {
+    return bundledAvatarByPath[src];
+  }
+
+  const avatarUrl = resolveAvatarUrl(src ?? null, baseUrl);
+  if (avatarUrl) {
+    return { uri: avatarUrl };
+  }
+
+  const bundledAvatarPath = avatarPathByPersonId[personId];
+  return bundledAvatarPath ? bundledAvatarByPath[bundledAvatarPath] ?? null : null;
 }
 
 function fallRiskTone(observation: FallRiskObservationRow | undefined): AlertTone {
@@ -585,6 +650,7 @@ function buildFallRiskMetrics(
 
 function buildFallRiskAlert(observation: FallRiskObservationRow | undefined) {
   if (!observation) return null;
+  if (observation.message_type === "session_summary") return null;
 
   const flags = Array.isArray(observation.risk_flags)
     ? observation.risk_flags
@@ -608,6 +674,49 @@ function buildFallRiskAlert(observation: FallRiskObservationRow | undefined) {
     }`,
     time: formatReadingTime(observation.detected_at ?? observation.generated_at),
   } satisfies AlertItem;
+}
+
+function coordinateNumber(value: number | string | null | undefined) {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isValidLatitude(value: number | null) {
+  return value !== null && value >= -90 && value <= 90;
+}
+
+function isValidLongitude(value: number | null) {
+  return value !== null && value >= -180 && value <= 180;
+}
+
+function buildMapLocation(fallRiskObservations: FallRiskObservationRow[]) {
+  const observation = fallRiskObservations.find((reading) => {
+    const latitude = coordinateNumber(reading.location_latitude);
+    const longitude = coordinateNumber(reading.location_longitude);
+    return isValidLatitude(latitude) && isValidLongitude(longitude);
+  });
+
+  if (!observation) return null;
+
+  return {
+    latitude: coordinateNumber(observation.location_latitude) ?? 0,
+    longitude: coordinateNumber(observation.location_longitude) ?? 0,
+    horizontalAccuracyM: coordinateNumber(observation.location_horizontal_accuracy_m),
+    speedMps: coordinateNumber(observation.location_speed_mps),
+    courseDeg: coordinateNumber(observation.location_course_deg),
+    timestamp: observation.location_timestamp ?? observation.generated_at,
+    source: observation.location_source ?? observation.source_app,
+    observationId: observation.id,
+  } satisfies MapLocationSnapshot;
+}
+
+function formatCoordinateLabel(location: MapLocationSnapshot) {
+  return `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+}
+
+function formatMapSource(source: string | null) {
+  if (!source) return "Fall-risk observation";
+  return titleCase(source);
 }
 
 function mapCareAlertTone(severity: CareAlertRow["severity"]): AlertTone {
@@ -727,6 +836,7 @@ function mapLiveData(
   const latestSteps = latestFallRisk?.step_count ?? latestReading?.steps;
   const latestGeneratedAt = latestFallRisk?.generated_at ?? latestReading?.occurred_at;
   const name = person.name || defaultElder.name;
+  const mapLocation = buildMapLocation(fallRiskObservations);
   const fallRiskAlert = buildFallRiskAlert(latestFallRisk);
   const activeCareAlerts = mapCareAlerts(careAlerts);
   const personAlertTone: AlertTone =
@@ -769,10 +879,11 @@ function mapLiveData(
       steps: formatSteps(latestSteps),
       sleep: formatBloodPressure(latestReading),
       initials: person.initials ?? initialsFromName(name),
-      avatar: resolveAvatarUrl(person.avatar),
+      avatar: resolveAvatarSource(person.avatar, person.id),
     },
     heartSamples,
     fallRiskMetrics: buildFallRiskMetrics(latestFallRisk, person),
+    mapLocation,
     medicationWeek: buildMedicationWeek(medications),
     alerts,
     deviceMetrics: [
@@ -787,47 +898,49 @@ function mapLiveData(
       ],
       ["Last sync", latestGeneratedAt ? formatReadingTime(latestGeneratedAt) : person.last_seen_label ?? "--"],
       ["Fall risk source", latestFallRisk?.source_app ?? "--"],
-      ["Person ID", PERSON_ID],
+      ["Person ID", person.id],
     ],
   } satisfies AppData;
 }
 
-async function loadSabawoonData() {
+async function loadPersonData(personId: string) {
+  const encodedPersonId = encodeURIComponent(personId);
+
   try {
     const personRows = await fetchSupabaseRows<CarePersonRow>(
       "care_people",
-      `select=*&id=eq.${PERSON_ID}&active=eq.true&limit=1`,
+      `select=*&id=eq.${encodedPersonId}&active=eq.true&limit=1`,
     );
 
     const person = personRows[0];
-    if (!person) return defaultAppData;
+    if (!person) return null;
 
     const [rules, medications, biometrics, fallRiskObservations, careAlerts] = await Promise.all([
       fetchSupabaseRows<CareRuleRow>(
         "care_rules",
-        `select=*&person_id=eq.${PERSON_ID}&order=created_at.desc`,
+        `select=*&person_id=eq.${encodedPersonId}&order=created_at.desc`,
       ),
       fetchSupabaseRows<MedicationRow>(
         "medications",
-        `select=*&elder_id=eq.${PERSON_ID}&order=created_at.asc`,
+        `select=*&elder_id=eq.${encodedPersonId}&order=created_at.asc`,
       ),
       fetchSupabaseRows<BiometricsRow>(
         "biometrics_data",
-        `select=*&person_id=eq.${PERSON_ID}&order=occurred_at.desc&limit=24`,
+        `select=*&person_id=eq.${encodedPersonId}&order=occurred_at.desc&limit=24`,
       ),
       fetchSupabaseRows<FallRiskObservationRow>(
         "fall_risk_observations",
-        `select=*&person_id=eq.${PERSON_ID}&order=generated_at.desc&limit=80`,
+        `select=*&person_id=eq.${encodedPersonId}&order=generated_at.desc&limit=80`,
       ),
       fetchSupabaseRows<CareAlertRow>(
         "care_alerts",
-        `select=*&person_id=eq.${PERSON_ID}&status=eq.active&order=sort_order.asc,created_at.desc`,
+        `select=*&person_id=eq.${encodedPersonId}&status=eq.active&order=sort_order.asc,created_at.desc`,
       ),
     ]);
 
     return mapLiveData(person, careAlerts, rules, medications, biometrics, fallRiskObservations);
   } catch {
-    return defaultAppData;
+    return null;
   }
 }
 
@@ -906,6 +1019,35 @@ function formatIsoDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function extractPersonIdFromQr(data: string) {
+  const trimmed = data.trim();
+  if (!trimmed) return null;
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (parsed && typeof parsed === "object") {
+      const record = parsed as Record<string, unknown>;
+      const candidate = record.id ?? record.person_id ?? record.personId;
+      if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+    }
+  } catch {
+    // Plain-text profile ids are expected; JSON is just a convenience path.
+  }
+
+  try {
+    const url = new URL(trimmed);
+    const queryId = url.searchParams.get("id") ?? url.searchParams.get("person_id") ?? url.searchParams.get("personId");
+    if (queryId?.trim()) return queryId.trim();
+
+    const pathId = url.pathname.split("/").filter(Boolean).at(-1);
+    if (pathId?.trim()) return decodeURIComponent(pathId.trim());
+  } catch {
+    // Not a URL; use the raw QR payload as the care_people id.
+  }
+
+  return trimmed;
+}
+
 /**
  * Scan past days in the medication week and create medication_missed alerts
  * for any day that has scheduled doses but no existing alert.
@@ -970,6 +1112,18 @@ function HeartMark() {
   );
 }
 
+function ScanIcon() {
+  return (
+    <View style={styles.scanIcon} accessible={false}>
+      <View style={[styles.scanCorner, styles.scanCornerTopLeft]} />
+      <View style={[styles.scanCorner, styles.scanCornerTopRight]} />
+      <View style={[styles.scanCorner, styles.scanCornerBottomLeft]} />
+      <View style={[styles.scanCorner, styles.scanCornerBottomRight]} />
+      <View style={styles.scanDot} />
+    </View>
+  );
+}
+
 function ActionButton({
   label,
   tone = "dark",
@@ -1029,9 +1183,6 @@ function HeartMonitor({
           <Text style={styles.emptyHeartText}>No live health readings yet.</Text>
         </View>
       )}
-      <Text style={styles.monitorNote}>
-        Heart-rate history is loaded from Supabase biometrics readings for {elder.preferredName}.
-      </Text>
     </View>
   );
 }
@@ -1051,23 +1202,109 @@ function MetricTile({
   );
 }
 
+function ProfileMapTile({
+  elder,
+  location,
+}: {
+  readonly elder: ElderProfile;
+  readonly location: MapLocationSnapshot | null;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const region = useMemo(
+    () =>
+      location
+        ? {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            latitudeDelta: MAP_LATITUDE_DELTA,
+            longitudeDelta: MAP_LONGITUDE_DELTA,
+          }
+        : null,
+    [location],
+  );
+
+  return (
+    <View style={styles.profileMapTile}>
+      {location && region ? (
+        <>
+          <MapView
+            initialRegion={region}
+            pitchEnabled={false}
+            pointerEvents="none"
+            rotateEnabled={false}
+            scrollEnabled={false}
+            style={styles.mapView}
+            zoomEnabled={false}
+          >
+            <Marker
+              coordinate={{ latitude: location.latitude, longitude: location.longitude }}
+              description={`${formatMapSource(location.source)} · ${formatCoordinateLabel(location)}`}
+              pinColor={colors.muted}
+              title={elder.name}
+            />
+          </MapView>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Expand map for ${elder.name}`}
+            onPress={() => setExpanded(true)}
+            style={styles.mapTapOverlay}
+          />
+          <Modal
+            animationType="slide"
+            onRequestClose={() => setExpanded(false)}
+            presentationStyle="pageSheet"
+            visible={expanded}
+          >
+            <SafeAreaView style={styles.mapModal}>
+              <View style={styles.mapModalHeader}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Close expanded map"
+                  onPress={() => setExpanded(false)}
+                  style={styles.mapCloseButton}
+                >
+                  <Text style={styles.mapCloseText}>Close</Text>
+                </Pressable>
+              </View>
+              <MapView initialRegion={region} style={styles.expandedMapView}>
+                <Marker
+                  coordinate={{ latitude: location.latitude, longitude: location.longitude }}
+                  description={`${formatMapSource(location.source)} · ${formatCoordinateLabel(location)}`}
+                  pinColor={colors.muted}
+                  title={elder.name}
+                />
+              </MapView>
+            </SafeAreaView>
+          </Modal>
+        </>
+      ) : (
+        <View style={styles.inlineMapEmpty}>
+          <Text style={styles.inlineMapEmptyText}>No GPS</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 function CareView({
   elder,
   heartSamples,
   fallRiskMetrics,
+  mapLocation,
 }: {
   readonly elder: ElderProfile;
   readonly heartSamples: number[];
   readonly fallRiskMetrics: string[][];
+  readonly mapLocation: MapLocationSnapshot | null;
 }) {
   return (
     <View style={styles.stack}>
       <View style={styles.profileCard}>
         <View style={styles.profileTop}>
           <View style={styles.avatar}>
-            {isValidAvatarUrl(elder.avatar) ? (
+            {elder.avatar ? (
               <Image
-                source={{ uri: elder.avatar }}
+                source={elder.avatar}
                 style={styles.avatarImage}
                 resizeMode="cover"
                 accessible={true}
@@ -1085,19 +1322,12 @@ function CareView({
           </View>
         </View>
         <View style={styles.profileStats}>
-          <MetricTile label="Location" value={elder.location} />
+          <ProfileMapTile elder={elder} location={mapLocation} />
           <MetricTile label="Status" value={elder.status} />
         </View>
       </View>
 
       <HeartMonitor elder={elder} heartSamples={heartSamples} />
-
-      <View style={styles.metricGrid}>
-        <MetricTile label="Oxygen" value={elder.oxygen} />
-        <MetricTile label="Steps" value={elder.steps} />
-        <MetricTile label="Blood pressure" value={elder.sleep} />
-        <MetricTile label="Next med" value="8:00 PM" />
-      </View>
 
       <View style={styles.fallRiskCard}>
         <Text style={styles.sectionTitle}>Fall risk</Text>
@@ -1301,44 +1531,123 @@ function DevicesView({
   );
 }
 
+function QrScannerModal({
+  error,
+  onClose,
+  onScan,
+  permissionGranted,
+  scanning,
+  visible,
+}: Readonly<{
+  error: string | null;
+  onClose: () => void;
+  onScan: (result: BarcodeScanningResult) => void;
+  permissionGranted: boolean;
+  scanning: boolean;
+  visible: boolean;
+}>) {
+  return (
+    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
+      <SafeAreaView style={styles.scannerModal}>
+        <View style={styles.scannerHeader}>
+          <View>
+            <Text style={styles.eyebrow}>QR scan</Text>
+            <Text style={styles.scannerTitle}>Care profile</Text>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close QR scanner" onPress={onClose} style={styles.mapCloseButton}>
+            <Text style={styles.mapCloseText}>Close</Text>
+          </Pressable>
+        </View>
+
+        {permissionGranted ? (
+          <View style={styles.scannerCameraWrap}>
+            <CameraView
+              active={visible}
+              barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+              facing="back"
+              onBarcodeScanned={scanning ? undefined : onScan}
+              style={styles.scannerCamera}
+            />
+            <View pointerEvents="none" style={styles.scannerFrame}>
+              <View style={[styles.scannerFrameCorner, styles.scannerFrameTopLeft]} />
+              <View style={[styles.scannerFrameCorner, styles.scannerFrameTopRight]} />
+              <View style={[styles.scannerFrameCorner, styles.scannerFrameBottomLeft]} />
+              <View style={[styles.scannerFrameCorner, styles.scannerFrameBottomRight]} />
+            </View>
+            <View style={styles.scannerStatus}>
+              <Text style={styles.scannerStatusText}>{scanning ? "Loading profile..." : "Point camera at a care profile QR code"}</Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.scannerPermissionCard}>
+            <Text style={styles.scannerPermissionTitle}>Camera access needed</Text>
+            <Text style={styles.scannerPermissionBody}>Allow camera access to scan a care profile QR code.</Text>
+          </View>
+        )}
+
+        {error ? (
+          <View style={styles.scannerError}>
+            <Text style={styles.scannerErrorText}>{error}</Text>
+          </View>
+        ) : null}
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
 export default function App() {
   const [appData, setAppData] = useState<AppData>(defaultAppData);
   const [activeTab, setActiveTab] = useState<TabKey>("care");
+  const [selectedPersonId, setSelectedPersonId] = useState(DEFAULT_PERSON_ID);
   const [selectedDay, setSelectedDay] = useState<MedicationDay>(defaultAppData.medicationWeek[2]);
   const [administeredDays, setAdministeredDays] = useState<Record<number, boolean>>(() =>
     Object.fromEntries(defaultAppData.medicationWeek.map((day) => [day.key, day.administered])),
   );
   const [checkedDoses, setCheckedDoses] = useState<Record<string, boolean>>({});
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [scannerPermissionGranted, setScannerPermissionGranted] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanResolving, setScanResolving] = useState(false);
+
+  const seedMedicationUi = (data: AppData) => {
+    setSelectedDay(data.medicationWeek[2] ?? data.medicationWeek[0]);
+    setAdministeredDays(
+      Object.fromEntries(data.medicationWeek.map((day) => [day.key, day.administered])),
+    );
+
+    const seededDoses: Record<string, boolean> = {};
+    for (const day of data.medicationWeek) {
+      if (day.administered) {
+        for (const dose of day.doses) {
+          seededDoses[dose.id] = true;
+        }
+      }
+    }
+    setCheckedDoses(seededDoses);
+  };
 
   useEffect(() => {
     let ignore = false;
     let hasSeededMedication = false;
 
     const refresh = () => {
-      loadSabawoonData()
+      loadPersonData(selectedPersonId)
         .then((data) => {
           if (ignore) return;
+          if (!data) {
+            setAppData(defaultAppData);
+            return;
+          }
+
           setAppData(data);
           if (!hasSeededMedication) {
-            setSelectedDay(data.medicationWeek[2] ?? data.medicationWeek[0]);
-            setAdministeredDays(
-              Object.fromEntries(data.medicationWeek.map((day) => [day.key, day.administered])),
-            );
-            // Seed per-dose checkboxes: mark all doses as checked for days that are already administered
-            const seededDoses: Record<string, boolean> = {};
-            for (const day of data.medicationWeek) {
-              if (day.administered) {
-                for (const dose of day.doses) {
-                  seededDoses[dose.id] = true;
-                }
-              }
-            }
-            setCheckedDoses(seededDoses);
+            seedMedicationUi(data);
             hasSeededMedication = true;
 
             // Check for missed medications and create alerts for past incomplete days
             checkMissedMedicationsOnLoad(
-              PERSON_ID,
+              selectedPersonId,
               data.elder.name,
               data.medicationWeek,
             );
@@ -1356,7 +1665,52 @@ export default function App() {
       ignore = true;
       clearInterval(interval);
     };
-  }, []);
+  }, [selectedPersonId]);
+
+  const openScanner = async () => {
+    setScanError(null);
+
+    if (cameraPermission?.granted) {
+      setScannerPermissionGranted(true);
+      setScannerVisible(true);
+      return;
+    }
+
+    const permission = await requestCameraPermission();
+    setScannerPermissionGranted(permission.granted);
+    setScannerVisible(true);
+    if (!permission.granted) {
+      setScanError("Camera permission was not granted.");
+    }
+  };
+
+  const handleQrScan = async (result: BarcodeScanningResult) => {
+    if (scanResolving) return;
+
+    const scannedPersonId = extractPersonIdFromQr(result.data);
+    if (!scannedPersonId) {
+      setScanError("No care profile id found in this QR code.");
+      return;
+    }
+
+    setScanResolving(true);
+    setScanError(null);
+    const data = await loadPersonData(scannedPersonId);
+
+    if (!data) {
+      setScanError(`No active care profile found for ${scannedPersonId}.`);
+      setScanResolving(false);
+      return;
+    }
+
+    setSelectedPersonId(scannedPersonId);
+    setAppData(data);
+    seedMedicationUi(data);
+    setActiveTab("care");
+    setScannerVisible(false);
+    setScanResolving(false);
+    checkMissedMedicationsOnLoad(scannedPersonId, data.elder.name, data.medicationWeek);
+  };
 
   const title = useMemo(() => {
     if (activeTab === "care") return "Care overview";
@@ -1390,7 +1744,19 @@ export default function App() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <View style={styles.titleBlock}>
             <Text style={styles.eyebrow}>{subtitle}</Text>
-            <Text style={styles.screenTitle}>{title}</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.screenTitle}>{title}</Text>
+              {activeTab === "care" ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Scan care profile QR code"
+                  onPress={openScanner}
+                  style={styles.scanButton}
+                >
+                  <ScanIcon />
+                </Pressable>
+              ) : null}
+            </View>
           </View>
 
           {activeTab === "care" ? (
@@ -1398,6 +1764,7 @@ export default function App() {
               elder={appData.elder}
               heartSamples={appData.heartSamples}
               fallRiskMetrics={appData.fallRiskMetrics}
+              mapLocation={appData.mapLocation}
             />
           ) : null}
           {activeTab === "medication" ? (
@@ -1424,7 +1791,7 @@ export default function App() {
                       if (daysAgo < 0) daysAgo += 7;
                       const scheduleDate = new Date(today);
                       scheduleDate.setDate(scheduleDate.getDate() - daysAgo);
-                      resolveMedicationMissedCareAlert(PERSON_ID, formatIsoDate(scheduleDate));
+                      resolveMedicationMissedCareAlert(selectedPersonId, formatIsoDate(scheduleDate));
                     }
                   }
 
@@ -1438,6 +1805,18 @@ export default function App() {
             <DevicesView elder={appData.elder} deviceMetrics={appData.deviceMetrics} />
           ) : null}
         </ScrollView>
+
+        <QrScannerModal
+          error={scanError}
+          onClose={() => {
+            setScannerVisible(false);
+            setScanResolving(false);
+          }}
+          onScan={handleQrScan}
+          permissionGranted={scannerPermissionGranted || Boolean(cameraPermission?.granted)}
+          scanning={scanResolving}
+          visible={scannerVisible}
+        />
 
         <View style={styles.tabBar}>
           {tabs.map((tab) => {
@@ -1529,6 +1908,12 @@ const styles = StyleSheet.create({
   titleBlock: {
     marginBottom: 18,
   },
+  titleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 14,
+  },
   eyebrow: {
     color: colors.textSoft,
     fontSize: 12,
@@ -1543,6 +1928,61 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
     lineHeight: 38,
     marginTop: 6,
+  },
+  scanButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.taupe,
+    borderRadius: 14,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: "center",
+    marginTop: 6,
+    width: 44,
+  },
+  scanIcon: {
+    height: 22,
+    position: "relative",
+    width: 22,
+  },
+  scanCorner: {
+    borderColor: colors.ink,
+    height: 8,
+    position: "absolute",
+    width: 8,
+  },
+  scanCornerTopLeft: {
+    borderLeftWidth: 2,
+    borderTopWidth: 2,
+    left: 0,
+    top: 0,
+  },
+  scanCornerTopRight: {
+    borderRightWidth: 2,
+    borderTopWidth: 2,
+    right: 0,
+    top: 0,
+  },
+  scanCornerBottomLeft: {
+    borderBottomWidth: 2,
+    borderLeftWidth: 2,
+    bottom: 0,
+    left: 0,
+  },
+  scanCornerBottomRight: {
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
+    bottom: 0,
+    right: 0,
+  },
+  scanDot: {
+    backgroundColor: colors.ink,
+    borderRadius: 3,
+    height: 6,
+    left: 8,
+    position: "absolute",
+    top: 8,
+    width: 6,
   },
   stack: {
     gap: 14,
@@ -1628,6 +2068,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   profileStats: {
+    alignItems: "stretch",
     flexDirection: "row",
     gap: 10,
     marginTop: 16,
@@ -1705,13 +2146,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
   },
-  monitorNote: {
-    color: colors.stone,
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 19,
-    marginTop: 14,
-  },
   metricGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1723,6 +2157,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     flex: 1,
+    justifyContent: "center",
+    minHeight: 136,
     minWidth: "46%",
     padding: 14,
   },
@@ -1751,6 +2187,195 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     fontSize: 14,
     fontWeight: "700",
+    lineHeight: 20,
+  },
+  profileMapTile: {
+    backgroundColor: colors.surface,
+    borderColor: colors.stone,
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 136,
+    minWidth: "46%",
+    overflow: "hidden",
+    position: "relative",
+  },
+  mapView: {
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
+  mapTapOverlay: {
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    zIndex: 2,
+  },
+  inlineMapEmpty: {
+    alignItems: "center",
+    backgroundColor: colors.cream,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 136,
+  },
+  inlineMapEmptyText: {
+    color: colors.textSoft,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  mapModal: {
+    backgroundColor: colors.cream,
+    flex: 1,
+  },
+  mapModalHeader: {
+    alignItems: "flex-end",
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.taupe,
+    borderBottomWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  mapCloseButton: {
+    alignItems: "center",
+    backgroundColor: colors.sand,
+    borderColor: colors.taupe,
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 38,
+    paddingHorizontal: 14,
+  },
+  mapCloseText: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  expandedMapView: {
+    flex: 1,
+  },
+  scannerModal: {
+    backgroundColor: colors.cream,
+    flex: 1,
+  },
+  scannerHeader: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.taupe,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  scannerTitle: {
+    color: colors.ink,
+    fontSize: 24,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  scannerCameraWrap: {
+    flex: 1,
+    overflow: "hidden",
+    position: "relative",
+  },
+  scannerCamera: {
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
+  scannerFrame: {
+    height: 230,
+    left: "50%",
+    marginLeft: -115,
+    marginTop: -115,
+    position: "absolute",
+    top: "50%",
+    width: 230,
+  },
+  scannerFrameCorner: {
+    borderColor: colors.sand,
+    height: 44,
+    position: "absolute",
+    width: 44,
+  },
+  scannerFrameTopLeft: {
+    borderLeftWidth: 4,
+    borderTopWidth: 4,
+    left: 0,
+    top: 0,
+  },
+  scannerFrameTopRight: {
+    borderRightWidth: 4,
+    borderTopWidth: 4,
+    right: 0,
+    top: 0,
+  },
+  scannerFrameBottomLeft: {
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    bottom: 0,
+    left: 0,
+  },
+  scannerFrameBottomRight: {
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    bottom: 0,
+    right: 0,
+  },
+  scannerStatus: {
+    alignSelf: "center",
+    backgroundColor: "rgba(90, 86, 75, 0.82)",
+    borderColor: "rgba(248, 238, 217, 0.28)",
+    borderRadius: 999,
+    borderWidth: 1,
+    bottom: 42,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    position: "absolute",
+  },
+  scannerStatusText: {
+    color: colors.sand,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  scannerPermissionCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.taupe,
+    borderRadius: 22,
+    borderWidth: 1,
+    margin: 20,
+    padding: 18,
+  },
+  scannerPermissionTitle: {
+    color: colors.ink,
+    fontSize: 22,
+    fontWeight: "900",
+  },
+  scannerPermissionBody: {
+    color: colors.textSoft,
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 22,
+    marginTop: 8,
+  },
+  scannerError: {
+    backgroundColor: colors.sand,
+    borderColor: colors.taupe,
+    borderRadius: 16,
+    borderWidth: 1,
+    margin: 16,
+    padding: 14,
+  },
+  scannerErrorText: {
+    color: colors.ink,
+    fontSize: 14,
+    fontWeight: "800",
     lineHeight: 20,
   },
   weekCard: {
