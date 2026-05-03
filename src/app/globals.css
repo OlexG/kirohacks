@@ -10314,17 +10314,45 @@ button.care-sidebar-link {
   }
 }
 
+.person-profile-live-corner {
+  max-width: min(330px, calc(100% - 28px));
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 330px;
+  z-index: 3;
+}
+
+.person-profile-live-corner .profile-live-console {
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  .person-profile-live-corner {
+    position: static;
+    width: 100%;
+  }
+
+  .person-focus-card {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
 /* Fall-risk profile bento panels. */
 .person-room-tray {
   align-items: stretch;
   grid-template-areas:
     "profile profile charts charts"
+    "location location location alerts"
     "medication medication medication alerts";
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .person-profile-data-card,
-.person-chart-card {
+.person-chart-card,
+.person-location-card {
   background: rgba(255, 253, 248, 0.94);
   border: 1px solid var(--care-border);
   border-radius: 8px;
@@ -10340,6 +10368,13 @@ button.care-sidebar-link {
 
 .person-chart-card {
   grid-area: charts;
+}
+
+.person-location-card {
+  grid-area: location;
+  min-height: 380px;
+  padding: 0;
+  position: relative;
 }
 
 .person-room-tray .person-week-card {
@@ -10379,6 +10414,139 @@ button.care-sidebar-link {
   line-height: 1;
   padding: 8px 11px;
   white-space: nowrap;
+}
+
+.person-map-panel {
+  background: #e8e3d8;
+  height: 100%;
+  min-height: 380px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.person-map-tile-layer {
+  inset: 0;
+  position: absolute;
+}
+
+.person-map-tile {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 256px 256px;
+  height: 256px;
+  position: absolute;
+  width: 256px;
+}
+
+.person-map-marker {
+  align-items: center;
+  display: grid;
+  height: 72px;
+  justify-items: center;
+  left: 50%;
+  position: absolute;
+  top: 48%;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  z-index: 2;
+}
+
+.person-map-marker span {
+  animation: profile-live-breathe 1.8s ease-in-out infinite;
+  background: rgba(184, 74, 60, 0.2);
+  border: 1px solid rgba(184, 74, 60, 0.38);
+  border-radius: 999px;
+  inset: 0;
+  position: absolute;
+}
+
+.person-map-marker img {
+  border: 3px solid #fffdfa;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 2px rgba(184, 74, 60, 0.78),
+    0 12px 28px rgba(33, 31, 27, 0.18);
+  display: block;
+  height: 54px;
+  object-fit: cover;
+  position: relative;
+  width: 54px;
+}
+
+.person-map-marker::after {
+  background: #b84a3c;
+  border: 3px solid #fffdfa;
+  border-radius: 999px;
+  bottom: 4px;
+  box-shadow: 0 6px 12px rgba(33, 31, 27, 0.2);
+  content: "";
+  height: 14px;
+  position: absolute;
+  right: 8px;
+  width: 14px;
+}
+
+.person-map-address {
+  background: rgba(255, 253, 248, 0.92);
+  border: 1px solid rgba(159, 144, 122, 0.32);
+  border-radius: 8px;
+  bottom: 16px;
+  box-shadow: 0 10px 24px rgba(33, 31, 27, 0.1);
+  left: 16px;
+  padding: 12px;
+  position: absolute;
+  width: min(260px, calc(100% - 32px));
+  z-index: 2;
+}
+
+.person-map-attribution {
+  background: rgba(255, 253, 248, 0.86);
+  border: 1px solid rgba(159, 144, 122, 0.24);
+  border-radius: 999px;
+  bottom: 14px;
+  color: var(--care-secondary);
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1;
+  padding: 7px 9px;
+  position: absolute;
+  right: 14px;
+  text-decoration: none;
+  z-index: 2;
+}
+
+.person-map-attribution:hover,
+.person-map-attribution:focus-visible {
+  color: var(--care-primary);
+  outline: none;
+  text-decoration: underline;
+}
+
+.person-map-address span,
+.person-map-address small {
+  color: var(--care-secondary);
+  display: block;
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1.2;
+}
+
+.person-map-address span {
+  text-transform: uppercase;
+}
+
+.person-map-address strong {
+  color: var(--care-primary);
+  display: block;
+  font-size: 17px;
+  font-weight: 880;
+  line-height: 1.15;
+  margin-top: 4px;
+}
+
+.person-map-address small {
+  margin-top: 4px;
 }
 
 .person-room-status span.non-live-profile-pill,
@@ -10637,6 +10805,7 @@ body[data-profile-chart-state="updated"] .person-mini-chart svg path:last-child 
     grid-template-areas:
       "profile"
       "charts"
+      "location"
       "medication"
       "alerts";
     grid-template-columns: 1fr;
@@ -10657,6 +10826,10 @@ body[data-profile-chart-state="updated"] .person-mini-chart svg path:last-child 
   .person-chart-grid,
   .person-profile-data-grid {
     grid-template-columns: 1fr;
+  }
+
+  .person-map-panel {
+    min-height: 300px;
   }
 }
 

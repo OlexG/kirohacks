@@ -40,6 +40,19 @@ type ChartPoint = {
 };
 
 const INSTABILITY_FLASH_THRESHOLD = 80;
+const SABAWOON_LOCATION_ADDRESS = "611 Luneta Dr";
+const SABAWOON_LOCATION_CITY = "San Luis Obispo, CA";
+const SABAWOON_LOCATION_LATITUDE = 35.291391;
+const SABAWOON_LOCATION_LONGITUDE = -120.6747912;
+const SABAWOON_LOCATION_ZOOM = 17;
+const MAP_TILE_SIZE = 256;
+
+type MapTile = {
+  key: string;
+  left: string;
+  top: string;
+  url: string;
+};
 
 function formatNullable(value: number | string | boolean | null | undefined, fallback = "--") {
   if (value === null || value === undefined || value === "") {
@@ -133,6 +146,96 @@ function MiniLineChart({
       </svg>
       <p>{latest?.label ?? "Latest"}</p>
     </article>
+  );
+}
+
+function buildMapTiles(latitude: number, longitude: number, zoom: number): MapTile[] {
+  const scale = 2 ** zoom;
+  const latitudeRadians = (latitude * Math.PI) / 180;
+  const x = ((longitude + 180) / 360) * scale;
+  const y =
+    ((1 - Math.log(Math.tan(latitudeRadians) + 1 / Math.cos(latitudeRadians)) / Math.PI) /
+      2) *
+    scale;
+  const centerTileX = Math.floor(x);
+  const centerTileY = Math.floor(y);
+  const fractionalX = x - centerTileX;
+  const fractionalY = y - centerTileY;
+  const tiles: MapTile[] = [];
+
+  for (let yOffset = -2; yOffset <= 2; yOffset += 1) {
+    for (let xOffset = -2; xOffset <= 2; xOffset += 1) {
+      const tileX = centerTileX + xOffset;
+      const tileY = centerTileY + yOffset;
+      const wrappedTileX = ((tileX % scale) + scale) % scale;
+
+      tiles.push({
+        key: `${zoom}-${wrappedTileX}-${tileY}`,
+        left: `calc(50% + ${(xOffset - fractionalX) * MAP_TILE_SIZE}px)`,
+        top: `calc(50% + ${(yOffset - fractionalY) * MAP_TILE_SIZE}px)`,
+        url: `https://tile.openstreetmap.org/${zoom}/${wrappedTileX}/${tileY}.png`,
+      });
+    }
+  }
+
+  return tiles;
+}
+
+function PersonLocationMap({
+  personName,
+  photo,
+}: Readonly<{
+  personName: string;
+  photo: string;
+}>) {
+  const mapTiles = buildMapTiles(
+    SABAWOON_LOCATION_LATITUDE,
+    SABAWOON_LOCATION_LONGITUDE,
+    SABAWOON_LOCATION_ZOOM,
+  );
+  const coordinateLabel = `${SABAWOON_LOCATION_LATITUDE.toFixed(6)}, ${SABAWOON_LOCATION_LONGITUDE.toFixed(6)}`;
+
+  return (
+    <section className="person-location-card" aria-label={`${personName} location`}>
+      <div
+        className="person-map-panel"
+        aria-label={`${personName} near ${SABAWOON_LOCATION_ADDRESS}, ${SABAWOON_LOCATION_CITY}`}
+      >
+        <div className="person-map-tile-layer" aria-hidden="true">
+          {mapTiles.map((tile) => (
+            <span
+              className="person-map-tile"
+              key={tile.key}
+              style={{
+                backgroundImage: `url("${tile.url}")`,
+                left: tile.left,
+                top: tile.top,
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="person-map-marker" aria-hidden="true">
+          <span />
+          <Image src={photo} alt="" width={54} height={54} unoptimized />
+        </div>
+
+        <div className="person-map-address">
+          <span>{personName}</span>
+          <strong>{SABAWOON_LOCATION_ADDRESS}</strong>
+          <small>{SABAWOON_LOCATION_CITY}</small>
+          <small>{coordinateLabel}</small>
+        </div>
+        <a
+          className="person-map-attribution"
+          href="https://www.openstreetmap.org/copyright"
+          rel="noreferrer"
+          target="_blank"
+        >
+          © OpenStreetMap
+        </a>
+      </div>
+    </section>
   );
 }
 
@@ -244,27 +347,17 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
             </header>
 
             <section className="person-profile-view person-room-view">
-              <div className="person-room-topbar" aria-label="Profile controls">
-                <Link className="person-back-link" href="/app/dashboard">
-                  Back to workspace
-                </Link>
-                <div className="person-room-status" aria-label="Profile status">
-                  {!isLiveProfile ? <span className="non-live-profile-pill">Non live profile</span> : null}
-                  <span>{alerts.length === 0 ? "No active alerts" : `${alerts.length} active alerts`}</span>
-                  <span>{formatWatchBattery(person.watch_battery_percent)} watch</span>
-                  <span>{person.last_seen_label}</span>
-                </div>
-                <LiveDataRefresh
-                  intervalMs={3500}
-                  statusText="Watch is connected"
-                  updatedAt={person.fall_risk_updated_at ?? latestObservation?.generated_at}
-                  variant="profile"
-                  watchedKey={latestFallRiskSignature}
-                />
-              </div>
-
               <div className="person-room-stage">
                 <article className="person-focus-card" aria-label="Profile summary">
+                  <div className="person-profile-live-corner" aria-label="Watch connection status">
+                    <LiveDataRefresh
+                      intervalMs={3500}
+                      statusText="Watch is connected"
+                      updatedAt={person.fall_risk_updated_at ?? latestObservation?.generated_at}
+                      variant="profile"
+                      watchedKey={latestFallRiskSignature}
+                    />
+                  </div>
                   <div className="person-focus-content">
                     <Image
                       className="person-focus-photo"
@@ -436,6 +529,8 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                     <span>HR range {minHeartRate}-{maxHeartRate} bpm</span>
                   </div>
                 </section>
+
+                {isLiveProfile ? <PersonLocationMap personName={person.name} photo={image.photo} /> : null}
 
                 <section className="person-week-card" aria-label="Medication schedule">
                   <header>
