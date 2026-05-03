@@ -53,6 +53,15 @@ export type FallRiskObservation = {
   altitude_delta_m: number | null;
   floors_ascended: number | null;
   floors_descended: number | null;
+  location_latitude: number | null;
+  location_longitude: number | null;
+  location_horizontal_accuracy_m: number | null;
+  location_altitude_m: number | null;
+  location_vertical_accuracy_m: number | null;
+  location_speed_mps: number | null;
+  location_course_deg: number | null;
+  location_timestamp: string | null;
+  location_source: "watch_gps" | null;
   risk_flags: unknown[];
   payload: JsonObject;
   created_at: string;
@@ -74,6 +83,7 @@ const eventSeverities = ["info", "moderate", "high"] as const;
 const steadinessClasses = ["ok", "low", "very_low", "unknown"] as const;
 const sexes = ["female", "male", "other", "unknown"] as const;
 const assistiveDevices = ["none", "cane", "walker", "wheelchair", "unknown"] as const;
+const locationSources = ["watch_gps"] as const;
 
 export function isFallRiskEnvelope(payload: JsonObject) {
   return payload.schemaVersion === "fallrisk.v1";
@@ -154,6 +164,42 @@ function clampScore100(value: number | null) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function assertCoordinate(value: number | null, fieldName: string, min: number, max: number) {
+  if (value === null || value < min || value > max) {
+    throw new FallRiskEnvelopeError(`location.${fieldName} must be between ${min} and ${max}.`);
+  }
+
+  return value;
+}
+
+function parseLocationSnapshot(envelope: JsonObject) {
+  if (!hasOwn(envelope, "location") || envelope.location === null) {
+    return null;
+  }
+
+  const location = objectAt(envelope, "location");
+  if (!location) {
+    throw new FallRiskEnvelopeError("location must be an object or null.");
+  }
+
+  const source = enumAt(location, "source", locationSources);
+  if (!source) {
+    throw new FallRiskEnvelopeError("location.source must be watch_gps.");
+  }
+
+  return {
+    latitude: assertCoordinate(numberAt(location, "latitude"), "latitude", -90, 90),
+    longitude: assertCoordinate(numberAt(location, "longitude"), "longitude", -180, 180),
+    horizontalAccuracyM: numberAt(location, "horizontalAccuracyM"),
+    altitudeM: numberAt(location, "altitudeM"),
+    verticalAccuracyM: numberAt(location, "verticalAccuracyM"),
+    speedMps: numberAt(location, "speedMps"),
+    courseDeg: numberAt(location, "courseDeg"),
+    timestamp: parseIsoTimestamp(location.timestamp, "location.timestamp"),
+    source,
+  };
+}
+
 function parseEnvelope(envelope: JsonObject) {
   const messageType = enumAt(envelope, "messageType", allMessageTypes);
   const source = objectAt(envelope, "source");
@@ -192,6 +238,7 @@ function parseEnvelope(envelope: JsonObject) {
     generatedAt,
     sequence,
     sourceApp,
+    location: parseLocationSnapshot(envelope),
     payload,
   };
 }
@@ -280,6 +327,7 @@ function buildObservationInsert(envelope: ReturnType<typeof parseEnvelope>) {
   const evidence = objectAt(payload, "evidence");
   const scores = getScores(payload);
   const riskFlags = Array.isArray(payload.riskFlags) ? payload.riskFlags : [];
+  const location = envelope.location;
 
   return {
     person_id: SABAWOON_HAKIMI_PERSON_ID,
@@ -331,6 +379,15 @@ function buildObservationInsert(envelope: ReturnType<typeof parseEnvelope>) {
     altitude_delta_m: numberAt(elevation, "altitudeDeltaM"),
     floors_ascended: integerOrNull(numberAt(elevation, "floorsAscended") ?? numberAt(activity, "flightsAscended")),
     floors_descended: integerOrNull(numberAt(elevation, "floorsDescended") ?? numberAt(activity, "flightsDescended")),
+    location_latitude: location?.latitude ?? null,
+    location_longitude: location?.longitude ?? null,
+    location_horizontal_accuracy_m: location?.horizontalAccuracyM ?? null,
+    location_altitude_m: location?.altitudeM ?? null,
+    location_vertical_accuracy_m: location?.verticalAccuracyM ?? null,
+    location_speed_mps: location?.speedMps ?? null,
+    location_course_deg: location?.courseDeg ?? null,
+    location_timestamp: location?.timestamp ?? null,
+    location_source: location?.source ?? null,
     risk_flags: riskFlags,
     payload,
   };
@@ -363,6 +420,18 @@ async function updateLatestCarePersonState(observation: ReturnType<typeof buildO
     update.walking_double_support_pct = observation.walking_double_support_pct;
   }
   if (observation.heart_rate_bpm !== null) update.heart_rate_bpm = observation.heart_rate_bpm;
+  if (observation.location_latitude !== null && observation.location_longitude !== null) {
+    update.latest_location_latitude = observation.location_latitude;
+    update.latest_location_longitude = observation.location_longitude;
+    update.latest_location_horizontal_accuracy_m = observation.location_horizontal_accuracy_m;
+    update.latest_location_altitude_m = observation.location_altitude_m;
+    update.latest_location_vertical_accuracy_m = observation.location_vertical_accuracy_m;
+    update.latest_location_speed_mps = observation.location_speed_mps;
+    update.latest_location_course_deg = observation.location_course_deg;
+    update.latest_location_timestamp = observation.location_timestamp;
+    update.latest_location_source = observation.location_source;
+    update.latest_location_updated_at = new Date().toISOString();
+  }
 
   const status = buildCareStatus(observation.rule_risk_level);
   if (status) {
@@ -432,6 +501,13 @@ function normalizeObservation(row: JsonObject): FallRiskObservation {
     altitude_delta_m: numberAt(row, "altitude_delta_m"),
     floors_ascended: integerOrNull(numberAt(row, "floors_ascended")),
     floors_descended: integerOrNull(numberAt(row, "floors_descended")),
+    location_latitude: numberAt(row, "location_latitude"),
+    location_longitude: numberAt(row, "location_longitude"),
+    location_horizontal_accuracy_m: numberAt(row, "location_horizontal_accuracy_m"),
+    location_altitude_m: numberAt(row, "location_altitude_m"),
+    location_vertical_accuracy_m: numberAt(row, "location_vertical_accuracy_m"),
+    location_speed_mps: numberAt(row, "location_speed_mps"),
+    location_course_deg: numberAt(row, "location_course_deg"),
   };
 }
 
@@ -440,7 +516,7 @@ export async function listFallRiskObservationsForPerson(personId: string, limit 
   const { data, error } = await supabase
     .from("fall_risk_observations")
     .select(
-      "id, person_id, schema_version, message_type, device_id, session_id, generated_at, sequence, source_app, window_start, window_end, detected_at, event_type, severity, activity_class, rule_risk_score_100, rule_instability_score_100, rule_risk_level, ml_risk_score_01, ml_model_version, walking_steadiness_score_01, walking_steadiness_class, walking_speed_mps, walking_step_length_m, walking_asymmetry_pct, walking_double_support_pct, heart_rate_bpm, cadence_spm, cadence_cv_pct, stride_time_cv_pct, accel_peak_g, jerk_peak_g_per_s, gyro_peak_rad_s, attitude_change_deg, sway_rms_deg, step_count, altitude_delta_m, floors_ascended, floors_descended, risk_flags, payload, created_at",
+      "id, person_id, schema_version, message_type, device_id, session_id, generated_at, sequence, source_app, window_start, window_end, detected_at, event_type, severity, activity_class, rule_risk_score_100, rule_instability_score_100, rule_risk_level, ml_risk_score_01, ml_model_version, walking_steadiness_score_01, walking_steadiness_class, walking_speed_mps, walking_step_length_m, walking_asymmetry_pct, walking_double_support_pct, heart_rate_bpm, cadence_spm, cadence_cv_pct, stride_time_cv_pct, accel_peak_g, jerk_peak_g_per_s, gyro_peak_rad_s, attitude_change_deg, sway_rms_deg, step_count, altitude_delta_m, floors_ascended, floors_descended, location_latitude, location_longitude, location_horizontal_accuracy_m, location_altitude_m, location_vertical_accuracy_m, location_speed_mps, location_course_deg, location_timestamp, location_source, risk_flags, payload, created_at",
     )
     .eq("person_id", personId)
     .order("generated_at", { ascending: false })

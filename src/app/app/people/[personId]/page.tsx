@@ -54,6 +54,19 @@ type MapTile = {
   url: string;
 };
 
+type PersonLocationSnapshot = {
+  latitude: number;
+  longitude: number;
+  horizontalAccuracyM: number | null;
+  altitudeM: number | null;
+  verticalAccuracyM: number | null;
+  speedMps: number | null;
+  courseDeg: number | null;
+  timestamp: string | null;
+  source: "watch_gps" | null;
+  isFallback: boolean;
+};
+
 function formatNullable(value: number | string | boolean | null | undefined, fallback = "--") {
   if (value === null || value === undefined || value === "") {
     return fallback;
@@ -76,6 +89,19 @@ function formatClass(value: string | null | undefined) {
   }
 
   return value.replaceAll("_", " ");
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) {
+    return "--";
+  }
+
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function latestNumber(
@@ -184,22 +210,29 @@ function buildMapTiles(latitude: number, longitude: number, zoom: number): MapTi
 function PersonLocationMap({
   personName,
   photo,
+  location,
 }: Readonly<{
   personName: string;
   photo: string;
+  location: PersonLocationSnapshot;
 }>) {
-  const mapTiles = buildMapTiles(
-    SABAWOON_LOCATION_LATITUDE,
-    SABAWOON_LOCATION_LONGITUDE,
-    SABAWOON_LOCATION_ZOOM,
-  );
-  const coordinateLabel = `${SABAWOON_LOCATION_LATITUDE.toFixed(6)}, ${SABAWOON_LOCATION_LONGITUDE.toFixed(6)}`;
+  const mapTiles = buildMapTiles(location.latitude, location.longitude, SABAWOON_LOCATION_ZOOM);
+  const coordinateLabel = `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+  const accuracyLabel =
+    location.horizontalAccuracyM === null
+      ? "Accuracy pending"
+      : `Accuracy ${location.horizontalAccuracyM.toFixed(0)} m`;
+  const movementLabel =
+    location.speedMps === null
+      ? "Speed pending"
+      : `Speed ${location.speedMps.toFixed(2)} m/s`;
+  const sourceLabel = location.isFallback ? "Home fallback" : formatClass(location.source);
 
   return (
     <section className="person-location-card" aria-label={`${personName} location`}>
       <div
         className="person-map-panel"
-        aria-label={`${personName} near ${SABAWOON_LOCATION_ADDRESS}, ${SABAWOON_LOCATION_CITY}`}
+        aria-label={`${personName} location ${coordinateLabel}`}
       >
         <div className="person-map-tile-layer" aria-hidden="true">
           {mapTiles.map((tile) => (
@@ -221,10 +254,17 @@ function PersonLocationMap({
         </div>
 
         <div className="person-map-address">
-          <span>{personName}</span>
-          <strong>{SABAWOON_LOCATION_ADDRESS}</strong>
-          <small>{SABAWOON_LOCATION_CITY}</small>
+          <span>{sourceLabel}</span>
+          <strong>{personName}</strong>
           <small>{coordinateLabel}</small>
+          <small>{accuracyLabel}</small>
+          <small>{movementLabel}</small>
+          <small>Updated {formatDateTime(location.timestamp)}</small>
+          {location.isFallback ? (
+            <small>
+              {SABAWOON_LOCATION_ADDRESS}, {SABAWOON_LOCATION_CITY}
+            </small>
+          ) : null}
         </div>
         <a
           className="person-map-attribution"
@@ -291,6 +331,48 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
   const cadence =
     latestNumber(fallRiskObservations, (observation) => observation.cadence_spm)?.cadence_spm ?? null;
   const latestObservation = fallRiskObservations[0] ?? null;
+  const latestLocationObservation = fallRiskObservations.find(
+    (observation) => observation.location_latitude !== null && observation.location_longitude !== null,
+  );
+  const latestLocation =
+    person.latest_location_latitude !== null && person.latest_location_longitude !== null
+      ? {
+          latitude: person.latest_location_latitude,
+          longitude: person.latest_location_longitude,
+          horizontalAccuracyM: person.latest_location_horizontal_accuracy_m,
+          altitudeM: person.latest_location_altitude_m,
+          verticalAccuracyM: person.latest_location_vertical_accuracy_m,
+          speedMps: person.latest_location_speed_mps,
+          courseDeg: person.latest_location_course_deg,
+          timestamp: person.latest_location_timestamp,
+          source: person.latest_location_source,
+          isFallback: false,
+        }
+      : latestLocationObservation
+        ? {
+            latitude: latestLocationObservation.location_latitude ?? SABAWOON_LOCATION_LATITUDE,
+            longitude: latestLocationObservation.location_longitude ?? SABAWOON_LOCATION_LONGITUDE,
+            horizontalAccuracyM: latestLocationObservation.location_horizontal_accuracy_m,
+            altitudeM: latestLocationObservation.location_altitude_m,
+            verticalAccuracyM: latestLocationObservation.location_vertical_accuracy_m,
+            speedMps: latestLocationObservation.location_speed_mps,
+            courseDeg: latestLocationObservation.location_course_deg,
+            timestamp: latestLocationObservation.location_timestamp,
+            source: latestLocationObservation.location_source,
+            isFallback: false,
+          }
+        : {
+            latitude: SABAWOON_LOCATION_LATITUDE,
+            longitude: SABAWOON_LOCATION_LONGITUDE,
+            horizontalAccuracyM: null,
+            altitudeM: null,
+            verticalAccuracyM: null,
+            speedMps: null,
+            courseDeg: null,
+            timestamp: null,
+            source: null,
+            isFallback: true,
+          };
   const isLiveProfile = person.id === SABAWOON_HAKIMI_PERSON_ID;
   const profileDataLabel = isLiveProfile
     ? person.fall_risk_updated_at
@@ -313,6 +395,7 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
     ruleRiskScore ?? "no-risk",
     instabilityScore ?? "no-instability",
     person.heart_rate_bpm ?? "no-hr",
+    person.latest_location_updated_at ?? latestLocationObservation?.location_timestamp ?? "no-location",
   ].join(":");
   const riskChart = chartPoints(fallRiskObservations, (observation) => observation.rule_risk_score_100);
   const instabilityChart = chartPoints(
@@ -530,7 +613,9 @@ export default async function PersonProfilePage({ params }: PersonPageProps) {
                   </div>
                 </section>
 
-                {isLiveProfile ? <PersonLocationMap personName={person.name} photo={image.photo} /> : null}
+                {isLiveProfile ? (
+                  <PersonLocationMap personName={person.name} photo={image.photo} location={latestLocation} />
+                ) : null}
 
                 <section className="person-week-card" aria-label="Medication schedule">
                   <header>

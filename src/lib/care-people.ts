@@ -39,6 +39,16 @@ export type CarePerson = {
   walking_step_length_m: number | null;
   walking_asymmetry_pct: number | null;
   walking_double_support_pct: number | null;
+  latest_location_latitude: number | null;
+  latest_location_longitude: number | null;
+  latest_location_horizontal_accuracy_m: number | null;
+  latest_location_altitude_m: number | null;
+  latest_location_vertical_accuracy_m: number | null;
+  latest_location_speed_mps: number | null;
+  latest_location_course_deg: number | null;
+  latest_location_timestamp: string | null;
+  latest_location_source: "watch_gps" | null;
+  latest_location_updated_at: string | null;
 };
 
 export type CarePeopleGroup = {
@@ -83,7 +93,7 @@ const groupConfig: Record<
 };
 
 const carePersonSelect =
-  "id, name, age, care_group, status, heart_rate_bpm, last_seen_label, watch_battery_percent, initials, avatar, alert, context, active, sort_order, created_at, updated_at, sex, height_cm, assistive_device, impairment_tags, prior_falls_12mo, injurious_fall_12mo, unable_to_rise_after_fall_12mo, fall_rule_risk_score_100, fall_rule_instability_score_100, fall_rule_risk_level, fall_ml_risk_score_01, fall_ml_model_version, fall_risk_updated_at, walking_steadiness_class, walking_steadiness_score_01, walking_speed_mps, walking_step_length_m, walking_asymmetry_pct, walking_double_support_pct";
+  "id, name, age, care_group, status, heart_rate_bpm, last_seen_label, watch_battery_percent, initials, avatar, alert, context, active, sort_order, created_at, updated_at, sex, height_cm, assistive_device, impairment_tags, prior_falls_12mo, injurious_fall_12mo, unable_to_rise_after_fall_12mo, fall_rule_risk_score_100, fall_rule_instability_score_100, fall_rule_risk_level, fall_ml_risk_score_01, fall_ml_model_version, fall_risk_updated_at, walking_steadiness_class, walking_steadiness_score_01, walking_speed_mps, walking_step_length_m, walking_asymmetry_pct, walking_double_support_pct, latest_location_latitude, latest_location_longitude, latest_location_horizontal_accuracy_m, latest_location_altitude_m, latest_location_vertical_accuracy_m, latest_location_speed_mps, latest_location_course_deg, latest_location_timestamp, latest_location_source, latest_location_updated_at";
 
 function numberOrNull(value: unknown) {
   const numberValue = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
@@ -102,6 +112,13 @@ function normalizeCarePerson(row: unknown) {
     walking_step_length_m: numberOrNull(person.walking_step_length_m),
     walking_asymmetry_pct: numberOrNull(person.walking_asymmetry_pct),
     walking_double_support_pct: numberOrNull(person.walking_double_support_pct),
+    latest_location_latitude: numberOrNull(person.latest_location_latitude),
+    latest_location_longitude: numberOrNull(person.latest_location_longitude),
+    latest_location_horizontal_accuracy_m: numberOrNull(person.latest_location_horizontal_accuracy_m),
+    latest_location_altitude_m: numberOrNull(person.latest_location_altitude_m),
+    latest_location_vertical_accuracy_m: numberOrNull(person.latest_location_vertical_accuracy_m),
+    latest_location_speed_mps: numberOrNull(person.latest_location_speed_mps),
+    latest_location_course_deg: numberOrNull(person.latest_location_course_deg),
   } satisfies CarePerson;
 }
 
